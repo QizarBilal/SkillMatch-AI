@@ -99,22 +99,39 @@ technical_ontology = set()
 for skill_type, skills in typed_technical_ontology.items():
     technical_ontology.update(skills)
 
+protected_technical_tokens = set()
+for skill_type, skills in typed_technical_ontology.items():
+    protected_technical_tokens.update(skills)
+
+generic_noun_blacklist = {
+    "intelligence", "design", "performance", "structure", "model", "data",
+    "analysis", "system", "application", "interactive", "responsive",
+    "content", "interface", "execution", "behavior", "insights", "visualization",
+    "quality", "solution", "platform", "information", "development", "management",
+    "experience", "knowledge", "proficiency", "familiarity", "understanding",
+    "ability", "capability", "efficiency", "scalability", "maintainability",
+    "accessibility", "compatibility", "security", "reliability", "availability"
+}
+
 generic_reject_list = {
-    "data", "analysis", "dashboard", "dashboards", "project", "projects", 
-    "developer", "engineer", "content", "report", "reports", "visualization",
+    "dashboard", "dashboards", "project", "projects", 
+    "developer", "engineer", "report", "reports",
     "modern", "professional", "collaborative", "fast", "clean", "maintainable",
     "large", "small", "big", "new", "old", "best", "good", "great", "better",
-    "quality", "high", "low", "performance", "efficient", "effective",
-    "solution", "solutions", "system", "systems", "application", "applications",
-    "software", "platform", "service", "services", "product", "products",
+    "high", "low", "efficient", "effective",
+    "solutions", "systems", "applications",
+    "software", "service", "services", "product", "products",
     "business", "enterprise", "company", "organization", "team", "user", "users",
-    "client", "clients", "customer", "customers", "management", "manager",
-    "information", "additional", "various", "across", "processes", "process",
+    "client", "clients", "customer", "customers", "manager",
+    "additional", "various", "across", "processes", "process",
     "collection", "amazon", "prime", "matrix", "issues", "issue", "devices",
-    "device", "browser", "compatibility", "enhance", "development", "frameworks",
-    "proficiency", "wireframes", "mockups", "pixel", "interactive", "responsive",
-    "design", "code", "build", "web", "frontend", "backend", "full", "stack",
-    "technologies", "tools", "skills", "knowledge", "experience", "years"
+    "device", "browser", "enhance",
+    "wireframes", "mockups", "pixel",
+    "code", "build", "web", "frontend", "backend", "full", "stack",
+    "years", "datasets", "predictable",
+    "friendly", "enthusiasts",
+    "task", "ensure", "standards", "upwork", "responsible",
+    "ids", "st", "me", "be", "to", "and", "or", "of", "in", "less"
 }
 
 tech_action_verbs = {
@@ -275,7 +292,14 @@ def clean_text(text):
     text = text.lower()
     text = re.sub(r'[^a-z0-9\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text)
-    tokens = [w for w in text.split() if w not in stopwords and len(w) > 1]
+    tokens = []
+    for w in text.split():
+        if len(w) <= 1:
+            continue
+        if w in protected_technical_tokens:
+            tokens.append(w)
+        elif w not in stopwords:
+            tokens.append(w)
     return " ".join(tokens)
 
 def normalize_phrase(phrase):
@@ -293,6 +317,16 @@ def is_technical_phrase(phrase):
 def is_junk_phrase(phrase):
     phrase_lower = phrase.lower()
     
+    if phrase_lower in protected_technical_tokens:
+        return False
+    
+    if phrase_lower in technical_ontology:
+        return False
+    
+    words = phrase_lower.split()
+    if len(words) == 1 and phrase_lower in generic_noun_blacklist:
+        return True
+    
     if phrase_lower in generic_reject_list:
         return True
     
@@ -303,7 +337,10 @@ def is_junk_phrase(phrase):
     if len(words) == 1 and words[0] in generic_reject_list:
         return True
     
-    stopword_count = sum(1 for w in words if w in stopwords)
+    if len(words) > 3:
+        return True
+    
+    stopword_count = sum(1 for w in words if w in stopwords and w not in protected_technical_tokens)
     if len(words) > 0 and (stopword_count / len(words)) > 0.5:
         return True
     
@@ -315,18 +352,16 @@ def is_junk_phrase(phrase):
     if phrase_lower in soft_skills:
         return True
     
-    task_phrases = ['conduct', 'perform', 'prepare', 'write', 'create', 'build', 'develop', 'manage', 'lead', 'coordinate']
-    for task in task_phrases:
-        if phrase_lower.startswith(task):
-            return True
+    if contains_verb(phrase):
+        return True
     
-    fragment_indicators = ['content', 'information', 'various', 'across', 'processes', 'issues', 'quality', 'multiple', 'support', 'focus']
+    fragment_indicators = ['content', 'information', 'various', 'across', 'processes', 'issues', 'quality', 'multiple', 'support', 'focus', 'datasets', 'collection', 'predictable']
     if len(words) >= 2:
         for indicator in fragment_indicators:
             if indicator in words and phrase_lower not in technical_ontology:
                 return True
     
-    adjectives = ['additional', 'various', 'multiple', 'high', 'low', 'best', 'better', 'clean', 'maintainable', 'interactive', 'responsive']
+    adjectives = ['additional', 'various', 'multiple', 'high', 'low', 'best', 'better', 'clean', 'maintainable', 'interactive', 'responsive', 'friendly']
     if words and words[0] in adjectives:
         return True
     
@@ -457,6 +492,12 @@ def is_valid_technical_skill(phrase):
         if phrase_lower not in technical_ontology:
             return False
     
+    common_non_tech_words = {'user', 'friendly', 'interface', 'content', 'fire', 'enthusiasts', 'insights', 'execution', 'task', 'wireframes', 'mockups', 'ensure', 'standards', 'accessibility', 'upwork', 'high', 'performance', 'interactive', 'reusable', 'quality'}
+    if len(words) >= 2:
+        non_tech_count = sum(1 for word in words if word in common_non_tech_words or word in generic_reject_list or word in stopwords)
+        if non_tech_count >= len(words) / 2:
+            return False
+    
     if not validate_phrase_structure(phrase):
         return False
     
@@ -484,15 +525,28 @@ def is_valid_technical_skill(phrase):
     if skill_type is not None:
         return True
     
+    if normalized_phrase in technical_ontology:
+        return True
+    
     if is_technical_phrase(phrase):
+        tech_word_count = sum(1 for word in words if word in technical_ontology or any(word in tech for tech in technical_ontology))
+        if tech_word_count == 0:
+            return False
         return True
     
     return False
 
 def extract_skills(text):
+    skills_section_match = re.search(r'(?i)(?:skills?|technical\s+skills?|programming\s+languages?|core\s+competencies|technologies).*?(?=\n(?:[A-Z][a-z]+:|\Z))', text, re.DOTALL)
+    
+    if skills_section_match:
+        priority_text = skills_section_match.group()
+    else:
+        priority_text = text
+    
     section_map = detect_sections(text)
-    sanitized = sanitize_resume_text(text)
-    text_lower = sanitized.lower()
+    sanitized = text
+    text_lower = text.lower()
     
     skill_scores = {}
     skill_metadata = {}
@@ -504,6 +558,8 @@ def extract_skills(text):
             normalized = normalize_phrase(tech_term)
             count = len(matches)
             section_priority = get_section_priority(text_lower, section_map)
+            if skills_section_match:
+                section_priority = 5.0
             skill_scores[normalized] = skill_scores.get(normalized, 0) + (count * section_priority)
             skill_metadata[normalized] = {'frequency': count, 'tfidf': 0, 'context': False, 'section_priority': section_priority}
     
@@ -563,13 +619,26 @@ def extract_skills(text):
             continue
         if skill in soft_skills:
             continue
-        if skill.lower() in generic_reject_list:
+        
+        skill_lower = skill.lower()
+        normalized_skill = normalize_phrase(skill_lower)
+        if skill_lower not in protected_technical_tokens and skill_lower not in technical_ontology and normalized_skill not in technical_ontology:
             continue
+        
+        skill_words = skill_lower.split()
+        if len(skill_words) == 1 and skill_lower in generic_noun_blacklist:
+            continue
+        
+        if skill_lower in generic_reject_list:
+            continue
+        
         skill_words = skill.split()
+        if len(skill_words) > 3:
+            continue
+        
         if len(skill_words) == 1 and skill_words[0].lower() in generic_reject_list:
             continue
-        if len(skill.split()) > 3:
-            continue
+        
         if not is_technical_phrase(skill):
             continue
         if is_junk_phrase(skill):
@@ -578,6 +647,20 @@ def extract_skills(text):
             continue
         if re.search(r'@|\.com|http|www', skill):
             continue
+        
+        if contains_verb(skill):
+            continue
+        
+        if nlp:
+            doc = nlp(skill)
+            has_bad_entity = False
+            for ent in doc.ents:
+                if ent.label_ in ['PERSON', 'GPE', 'LOC', 'DATE']:
+                    if skill_lower not in protected_technical_tokens:
+                        has_bad_entity = True
+                        break
+            if has_bad_entity:
+                continue
         
         section_priority = skill_metadata.get(skill, {}).get('section_priority', 1.0)
         if section_priority < 0:
@@ -602,7 +685,7 @@ def extract_skills(text):
     for skill, score in ranked_skills:
         if is_valid_technical_skill(skill):
             final_validated_skills.append(skill)
-        if len(final_validated_skills) >= 15:
+        if len(final_validated_skills) >= 50:
             break
     
     return final_validated_skills if final_validated_skills else ["general"]
@@ -613,19 +696,33 @@ def extract_keywords(docs):
     
     text = docs[0]
     
-    boilerplate_patterns = [
+    jd_boilerplate_patterns = [
+        r'(?i)arc\.dev.*?(?:\n\n|\Z)',
+        r'(?i)toptal.*?(?:\n\n|\Z)',
+        r'(?i)roadmap\.sh.*?(?:\n\n|\Z)',
+        r'(?i)upwork.*?(?:\n\n|\Z)',
         r'(?i)job title:.*?(?:\n|$)',
         r'(?i)location:.*?(?:\n|$)',
+        r'(?i)position type:.*?(?:\n|$)',
         r'(?i)employment type:.*?(?:\n|$)',
         r'(?i)salary range:.*?(?:\n|$)',
         r'(?i)compensation:.*?(?:\n|$)',
-        r'(?i)(?:we offer|benefits include|competitive salary|compensation package).*?(?:\n\n|\Z)',
+        r'(?i)about us:?.*?(?:\n\n|\Z)',
+        r'(?i)why join.*?(?:\n\n|\Z)',
+        r'(?i)(?:we offer|benefits include|competitive salary|compensation package|flexible work).*?(?:\n\n|\Z)',
         r'(?i)(?:equal opportunity employer|eeo statement|diversity statement).*?(?:\n\n|\Z)',
         r'(?i)(?:to apply|how to apply|application process|submit your|send resume).*?(?:\n\n|\Z)',
+        r'(?i)key components to customize.*?(?:\n\n|\Z)',
+        r'(?i)(?:tech stack update|experience level adjust|company culture add).*?(?:\n\n|\Z)',
         r'\[.*?\]',
-        r'\{.*?\}'
+        r'\{.*?\}',
+        r'(?i)(?:insert|add|update|adjust|customize).*?(?:here|below)',
+        r'(?i)company name',
+        r'(?i)brief description',
+        r'(?i)city.*?state'
     ]
-    for pattern in boilerplate_patterns:
+    
+    for pattern in jd_boilerplate_patterns:
         text = re.sub(pattern, ' ', text)
     
     for site in source_sites:
@@ -668,7 +765,7 @@ def extract_keywords(docs):
     for tech_term in technical_ontology:
         if tech_term in text_lower:
             normalized = normalize_phrase(tech_term)
-            keyword_scores[normalized] = keyword_scores.get(normalized, 0) + 3
+            keyword_scores[normalized] = keyword_scores.get(normalized, 0) + 5
     
     cleaned = clean_text(text)
     if cleaned:
@@ -706,13 +803,26 @@ def extract_keywords(docs):
         'code', 'build', 'work', 'skill', 'skills', 'knowledge', 'familiar', 'familiarity',
         'tool', 'tools', 'tech', 'technology', 'technologies', 'framework', 'frameworks',
         'use', 'using', 'used', 'develop', 'developing', 'developed',
-        'collaborate', 'collaboration', 'participate', 'participation'
+        'collaborate', 'collaboration', 'participate', 'participation',
+        'saas', 'fast', 'growing', 'dedicated', 'mission', 'creating', 'intuitive', 'financial',
+        'believe', 'quality', 'centric', 'fostering', 'innovative', 'talented', 'creative',
+        'translating', 'engaging', 'keen', 'eye', 'passion', 'command', 'hybrid', 'remote',
+        'full', 'time', 'part', 'contract', 'brief', 'description'
     }
     
     filtered_keywords = {}
     for keyword, score in keyword_scores.items():
         if score <= 0:
             continue
+        
+        keyword_lower = keyword.lower()
+        if keyword_lower not in protected_technical_tokens and keyword_lower not in technical_ontology:
+            continue
+        
+        keyword_words = keyword_lower.split()
+        if len(keyword_words) == 1 and keyword_lower in generic_noun_blacklist:
+            continue
+        
         if keyword in hr_noise:
             continue
         if keyword in soft_skills:
@@ -770,6 +880,58 @@ def extract_phone(text):
     return ""
 
 def extract_location(text):
+    location_pattern = re.search(r'(?i)(?:location|address|city|place)\s*[:|\-|–]\s*([^\n]+)', text)
+    if location_pattern:
+        location_text = location_pattern.group(1).strip()
+        location_text = re.sub(r'[\(\)\[\]\{\}]', '', location_text)
+        location_text = re.sub(r'\s+', ' ', location_text).strip()
+        
+        if nlp:
+            doc = nlp(location_text)
+            person_names = [ent.text.lower() for ent in doc.ents if ent.label_ == 'PERSON']
+            if person_names:
+                for name in person_names:
+                    name_words = name.split()
+                    for name_word in name_words:
+                        location_text = re.sub(r'\b' + re.escape(name_word) + r'\b', '', location_text, flags=re.IGNORECASE)
+        
+        words = location_text.split()
+        valid_words = []
+        
+        resume_keywords = ['passionate', 'developer', 'engineer', 'designer', 'analyst', 'architect', 
+                          'web', 'mobile', 'software', 'full', 'stack', 'frontend', 'backend',
+                          'strong', 'foundation', 'with', 'experience', 'skilled', 'building',
+                          'html', 'css', 'javascript', 'python', 'java', 'react', 'angular', 'vue',
+                          'summary', 'profile', 'resume', 'cv', 'curriculum', 'vitae']
+        
+        for word in words:
+            word_clean = word.strip(',').lower()
+            
+            if word_clean in resume_keywords:
+                break
+            
+            if '@' in word or 'http' in word or '.com' in word:
+                break
+            
+            if word.strip():
+                valid_words.append(word)
+            
+            if len(valid_words) >= 6:
+                break
+        
+        location_text = ' '.join(valid_words).strip()
+        location_text = re.sub(r'\s+', ' ', location_text).strip()
+        
+        if location_text and ',' in location_text and 5 <= len(location_text) <= 80:
+            return location_text
+    
+    city_state_pattern = re.search(r'([A-Z][a-zA-Z\s]+),\s*([A-Z][a-zA-Z\s]+),?\s*(India|USA|UK|Canada)?', text)
+    if city_state_pattern:
+        location_parts = [p.strip() for p in city_state_pattern.groups() if p]
+        location_result = ', '.join(location_parts)
+        if not re.search(r'@|http|www|Email|Phone', location_result):
+            return location_result
+    
     if not nlp:
         return ""
     
@@ -808,70 +970,121 @@ def extract_name(text):
     return ""
 
 def extract_education_degrees(text):
-    degree_keywords = {
-        'bachelor', 'bachelors', 'b.e', 'b.e.', 'btech', 'b.tech', 'bs', 'b.s', 'ba', 'b.a',
-        'master', 'masters', 'm.e', 'm.e.', 'mtech', 'm.tech', 'ms', 'm.s', 'ma', 'm.a', 'mba',
-        'phd', 'ph.d', 'doctorate', 'bsc', 'b.sc', 'msc', 'm.sc'
-    }
-    
     degrees = []
     text_lower = text.lower()
     
-    for keyword in degree_keywords:
-        pattern = r'\b' + re.escape(keyword) + r'\b'
-        if re.search(pattern, text_lower):
-            if keyword not in degrees:
-                degrees.append(keyword)
+    education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
+    search_text = education_section.group() if education_section else text[:3000]
+    search_lower = search_text.lower()
     
-    return degrees[:5]
-
-def extract_education_fields(text):
-    field_keywords = {
-        'computer science', 'information technology', 'engineering', 'software engineering',
-        'data science', 'information systems', 'electronics', 'electrical', 'mechanical',
-        'civil', 'mathematics', 'statistics', 'business', 'management', 'finance'
+    degree_mapping = {
+        r'(?:bachelor|ba|b\.a|bs|b\.s|bsc|b\.sc|b\.e|be|b\.tech|btech)\s+(?:of\s+)?(?:engineering|science|technology|arts|computer\s+science)': 'Bachelor of Engineering',
+        r'(?:master|ma|m\.a|ms|m\.s|msc|m\.sc|m\.e|me|m\.tech|mtech)\s+(?:of\s+)?(?:engineering|science|technology|arts|computer\s+science)': 'Master of Engineering',
+        r'(?:phd|ph\.d|doctorate)': 'PhD',
+        r'(?:mba|m\.b\.a)': 'MBA',
+        r'(?:diploma)': 'Diploma'
     }
     
+    for pattern, degree_name in degree_mapping.items():
+        if re.search(pattern, search_lower):
+            degrees.append(degree_name)
+    
+    if not degrees:
+        simple_patterns = {
+            r'\bb\.?\s*e\.?\b': 'Bachelor of Engineering',
+            r'\bb\.?\s*tech\b': 'Bachelor of Technology',
+            r'\bb\.?\s*s\.?c?\b\s+(?:computer|engineering)': 'Bachelor of Science',
+            r'\bm\.?\s*e\.?\b': 'Master of Engineering',
+            r'\bm\.?\s*tech\b': 'Master of Technology',
+            r'\bm\.?\s*s\.?c?\b\s+(?:computer|engineering)': 'Master of Science'
+        }
+        
+        for pattern, degree_name in simple_patterns.items():
+            if re.search(pattern, search_lower):
+                degrees.append(degree_name)
+                break
+    
+    return list(dict.fromkeys(degrees))[:3]
+
+def extract_education_fields(text):
     fields = []
-    text_lower = text.lower()
     
-    for field in field_keywords:
-        if field in text_lower:
-            fields.append(field)
+    education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
+    search_text = education_section.group() if education_section else text[:3000]
+    search_lower = search_text.lower()
     
-    return list(set(fields))
+    field_map = {
+        r'\bcse\b': 'Computer Science and Engineering',
+        r'\bcomputer science(?:\s+and\s+engineering)?\b': 'Computer Science',
+        r'\binformation technology\b': 'Information Technology',
+        r'\bit\b(?!\s+was)(?!\s+is)(?!\s+has)': 'Information Technology',
+        r'\bece\b': 'Electronics and Communication Engineering',
+        r'\beee\b': 'Electrical and Electronics Engineering',
+        r'\bsoftware engineering\b': 'Software Engineering',
+        r'\bdata science\b': 'Data Science',
+        r'\bmechanical engineering\b': 'Mechanical Engineering',
+        r'\bcivil engineering\b': 'Civil Engineering',
+        r'\belectrical engineering\b': 'Electrical Engineering',
+        r'\bbusiness administration\b': 'Business Administration',
+        r'\bmathematics\b': 'Mathematics',
+        r'\bphysics\b': 'Physics',
+        r'\bchemistry\b': 'Chemistry'
+    }
+    
+    for pattern, full_name in field_map.items():
+        if re.search(pattern, search_lower):
+            if full_name not in fields:
+                fields.append(full_name)
+    
+    return fields[:3]
 
 def extract_institutions(text):
-    if not nlp:
-        return []
+    education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
+    search_text = education_section.group() if education_section else text[:3000]
     
-    education_keywords = ['university', 'college', 'institute', 'school', 'academy']
+    education_keywords = ['university', 'college', 'institute', 'school', 'academy', 'engineering college']
     
     institutions = []
-    doc = nlp(text[:50000])
     
-    for ent in doc.ents:
-        if ent.label_ == 'ORG':
-            org_lower = ent.text.lower()
-            if any(edu_word in org_lower for edu_word in education_keywords):
-                if org_lower not in technical_ontology:
-                    institutions.append(ent.text)
+    if nlp:
+        doc = nlp(search_text[:10000])
+        
+        for ent in doc.ents:
+            if ent.label_ == 'ORG':
+                org_lower = ent.text.lower()
+                if any(edu_word in org_lower for edu_word in education_keywords):
+                    if org_lower not in technical_ontology:
+                        institutions.append(ent.text)
     
-    return list(set(institutions))
+    if not institutions:
+        lines = search_text.split('\n')
+        for line in lines:
+            line_lower = line.lower()
+            line_clean = line.strip()
+            
+            if any(keyword in line_lower for keyword in education_keywords):
+                if 10 <= len(line_clean) <= 100:
+                    if not re.search(r'@|http|www|\d{10}', line_clean):
+                        institutions.append(line_clean)
+    
+    return list(dict.fromkeys(institutions))[:3]
 
 def extract_experience_roles(text):
+    experience_section = re.search(r'(?i)(?:experience|work\s+experience).*?(?=\n(?:education|projects|skills|certifications)|\Z)', text, re.DOTALL)
+    search_text = experience_section.group() if experience_section else text[:3000]
+    
     role_indicators = {
         'engineer', 'developer', 'analyst', 'scientist', 'manager', 'architect',
         'designer', 'administrator', 'lead', 'specialist', 'consultant', 'coordinator',
-        'associate', 'intern', 'trainee'
+        'associate', 'intern', 'trainee', 'dev', 'programmer'
     }
     
     education_excludes = ['college', 'university', 'institute', 'school', 'academy']
     
     roles = []
-    text_lower = text.lower()
+    text_lower = search_text.lower()
     
-    lines = text.split('\n')
+    lines = search_text.split('\n')
     for line in lines:
         line_lower = line.lower()
         line_clean = line.strip()
@@ -883,9 +1096,9 @@ def extract_experience_roles(text):
             continue
         
         words = line_lower.split()
-        if 2 <= len(words) <= 6:
+        if 2 <= len(words) <= 8:
             if any(indicator in line_lower for indicator in role_indicators):
-                if len(line_clean) < 60 and not re.search(r'[0-9]{4}', line_clean):
+                if len(line_clean) < 80:
                     if line_clean not in roles:
                         roles.append(line_clean)
     
@@ -895,8 +1108,11 @@ def extract_experience_companies(text):
     if not nlp:
         return []
     
+    experience_section = re.search(r'(?i)(?:experience|work\s+experience).*?(?=\n(?:education|projects|skills|certifications)|\Z)', text, re.DOTALL)
+    search_text = experience_section.group() if experience_section else text[:3000]
+    
     companies = []
-    doc = nlp(text[:50000])
+    doc = nlp(search_text[:10000])
     
     education_keywords = ['university', 'college', 'institute', 'school', 'academy']
     tech_keywords = ['python', 'java', 'react', 'sql', 'aws', 'azure', 'excel', 'tableau']
@@ -1020,6 +1236,16 @@ def split_compound_phrases(phrases):
                 if part and len(part) > 1:
                     expanded.add(part)
         else:
+            words = phrase.lower().split()
+            if len(words) >= 2:
+                tech_count = sum(1 for word in words if word in technical_ontology or any(word in tech for tech in technical_ontology))
+                if tech_count >= 2:
+                    for word in words:
+                        word_clean = word.strip()
+                        if word_clean and len(word_clean) > 1 and (word_clean in technical_ontology or any(word_clean in tech for tech in technical_ontology)):
+                            expanded.add(word_clean)
+                    continue
+            
             expanded.add(phrase)
     
     return list(expanded)
@@ -1033,7 +1259,11 @@ def classify_by_ontology_type(phrases):
         'databases': []
     }
     
-    phrases = split_compound_phrases(phrases)
+    expanded_phrases = []
+    for phrase in phrases:
+        if phrase and phrase.lower() != 'general':
+            expanded_phrases.append(phrase)
+    phrases = split_compound_phrases(expanded_phrases)
     
     for phrase in phrases:
         phrase = phrase.strip()
@@ -1050,19 +1280,235 @@ def classify_by_ontology_type(phrases):
         if skill_type is None:
             continue
         
+        phrase_normalized = normalize_phrase(phrase.lower())
+        phrase_words = phrase_normalized.split()
+        
+        if len(phrase_words) == 1 and phrase_normalized in generic_noun_blacklist:
+            continue
+        
+        is_in_reject_list = phrase_normalized in generic_reject_list or any(word in generic_reject_list for word in phrase_words if len(phrase_words) == 1)
+        if is_in_reject_list:
+            continue
+        
+        exact_match = phrase_normalized in technical_ontology
+        if not exact_match:
+            has_match = False
+            for tech in technical_ontology:
+                if tech == phrase_normalized:
+                    has_match = True
+                    break
+            if not has_match and len(phrase_words) > 1:
+                continue
+        
         if skill_type == 'programming_language':
-            classified['languages'].append(phrase)
+            if phrase_normalized not in classified['frameworks'] and phrase_normalized not in classified['databases']:
+                classified['languages'].append(phrase_normalized)
+        elif skill_type == 'web_standard':
+            if phrase_normalized in ['html', 'html5', 'css', 'css3']:
+                classified['languages'].append(phrase_normalized)
+            else:
+                classified['technical_skills'].append(phrase_normalized)
         elif skill_type == 'database':
-            classified['databases'].append(phrase)
+            if phrase_normalized not in classified['languages']:
+                classified['databases'].append(phrase_normalized)
         elif skill_type == 'framework':
-            classified['frameworks'].append(phrase)
+            if phrase_normalized not in classified['languages']:
+                classified['frameworks'].append(phrase_normalized)
         elif skill_type in ['dev_tool', 'build_tool', 'version_control_tool', 'testing_tool', 'bi_tool', 'analytics_tool']:
-            classified['tools'].append(phrase)
-        elif skill_type in ['library', 'cloud_service', 'ml_method', 'ai_method', 'web_standard', 'css_preprocessor', 'rendering_framework', 'data_method']:
-            classified['technical_skills'].append(phrase)
+            if phrase_normalized not in classified['languages'] and phrase_normalized not in classified['frameworks']:
+                classified['tools'].append(phrase_normalized)
+        elif skill_type in ['library', 'cloud_service', 'ml_method', 'ai_method', 'css_preprocessor', 'rendering_framework', 'data_method']:
+            if phrase_normalized not in classified['languages'] and phrase_normalized not in classified['frameworks']:
+                classified['technical_skills'].append(phrase_normalized)
     
     for key in classified:
         classified[key] = list(dict.fromkeys(classified[key]))
+    
+    frameworks_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'framework':
+            frameworks_set.update(skills)
+    
+    databases_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'database':
+            databases_set.update(skills)
+    
+    languages_corrected = []
+    for lang in classified['languages']:
+        if lang in frameworks_set:
+            if lang not in classified['frameworks']:
+                classified['frameworks'].append(lang)
+        elif lang in databases_set:
+            if lang not in classified['databases']:
+                classified['databases'].append(lang)
+        else:
+            languages_corrected.append(lang)
+    
+    classified['languages'] = languages_corrected
+    
+    tools_corrected = []
+    for tool in classified['tools']:
+        if tool in databases_set:
+            if tool not in classified['databases']:
+                classified['databases'].append(tool)
+        elif tool in frameworks_set:
+            if tool not in classified['frameworks']:
+                classified['frameworks'].append(tool)
+        else:
+            tools_corrected.append(tool)
+    
+    classified['tools'] = tools_corrected
+    
+    frameworks_corrected = []
+    for fw in classified['frameworks']:
+        if fw in databases_set:
+            if fw not in classified['databases']:
+                classified['databases'].append(fw)
+        else:
+            frameworks_corrected.append(fw)
+    
+    classified['frameworks'] = frameworks_corrected
+    
+    return classified
+
+def classify_jd_keywords(phrases, jd_text):
+    classified = {
+        'technical_skills': [],
+        'tools': [],
+        'frameworks': [],
+        'languages': [],
+        'databases': []
+    }
+    
+    jd_lower = jd_text.lower()
+    phrases = split_compound_phrases(phrases)
+    
+    for phrase in phrases:
+        phrase = phrase.strip()
+        if not phrase or len(phrase) <= 1:
+            continue
+        
+        phrase_lower = phrase.lower()
+        phrase_pattern = r'\b' + re.escape(phrase_lower) + r'\b'
+        if not re.search(phrase_pattern, jd_lower):
+            continue
+        
+        if not is_valid_technical_skill(phrase):
+            continue
+        
+        if is_junk_phrase(phrase):
+            continue
+        
+        skill_type = get_skill_type(phrase)
+        if skill_type is None:
+            continue
+        
+        phrase_normalized = normalize_phrase(phrase_lower)
+        phrase_words = phrase_normalized.split()
+        
+        if len(phrase_words) == 1 and phrase_normalized in generic_noun_blacklist:
+            continue
+        
+        is_in_reject_list = phrase_normalized in generic_reject_list or any(word in generic_reject_list for word in phrase_words if len(phrase_words) == 1)
+        if is_in_reject_list:
+            continue
+        
+        exact_match = phrase_normalized in technical_ontology
+        if not exact_match:
+            has_match = False
+            for tech in technical_ontology:
+                if tech == phrase_normalized:
+                    has_match = True
+                    break
+            if not has_match and len(phrase_words) > 1:
+                continue
+        
+        if skill_type == 'programming_language':
+            if phrase_normalized not in classified['frameworks'] and phrase_normalized not in classified['databases']:
+                classified['languages'].append(phrase_normalized)
+        elif skill_type == 'database':
+            if phrase_normalized not in classified['languages']:
+                classified['databases'].append(phrase_normalized)
+        elif skill_type == 'framework':
+            if phrase_normalized not in classified['languages']:
+                classified['frameworks'].append(phrase_normalized)
+        elif skill_type in ['library', 'css_preprocessor', 'web_standard', 'rendering_framework']:
+            if phrase_normalized not in classified['languages'] and phrase_normalized not in classified['frameworks']:
+                classified['technical_skills'].append(phrase_normalized)
+        elif skill_type in ['dev_tool', 'build_tool', 'version_control_tool', 'testing_tool', 'bi_tool', 'analytics_tool']:
+            if phrase_normalized not in classified['languages'] and phrase_normalized not in classified['frameworks']:
+                classified['tools'].append(phrase_normalized)
+        elif skill_type in ['cloud_service', 'ml_method', 'ai_method', 'data_method']:
+            if phrase_normalized not in classified['languages'] and phrase_normalized not in classified['frameworks']:
+                classified['technical_skills'].append(phrase_normalized)
+    
+    for key in classified:
+        classified[key] = list(dict.fromkeys(classified[key]))
+    
+    prog_langs_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'programming_language':
+            prog_langs_set.update(skills)
+    
+    frameworks_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'framework':
+            frameworks_set.update(skills)
+    
+    databases_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'database':
+            databases_set.update(skills)
+    
+    libraries_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type in ['library', 'css_preprocessor']:
+            libraries_set.update(skills)
+    
+    web_standards_set = set()
+    for skill_type, skills in typed_technical_ontology.items():
+        if skill_type == 'web_standard':
+            web_standards_set.update(skills)
+    
+    languages_corrected = []
+    for lang in classified['languages']:
+        if lang in frameworks_set:
+            if lang not in classified['frameworks']:
+                classified['frameworks'].append(lang)
+        elif lang in databases_set:
+            if lang not in classified['databases']:
+                classified['databases'].append(lang)
+        elif lang in libraries_set or lang in web_standards_set:
+            if lang not in classified['technical_skills']:
+                classified['technical_skills'].append(lang)
+        elif lang in prog_langs_set:
+            languages_corrected.append(lang)
+    
+    classified['languages'] = languages_corrected
+    
+    tools_corrected = []
+    for tool in classified['tools']:
+        if tool in databases_set:
+            if tool not in classified['databases']:
+                classified['databases'].append(tool)
+        elif tool in frameworks_set:
+            if tool not in classified['frameworks']:
+                classified['frameworks'].append(tool)
+        else:
+            tools_corrected.append(tool)
+    
+    classified['tools'] = tools_corrected
+    
+    frameworks_corrected = []
+    for fw in classified['frameworks']:
+        if fw in databases_set:
+            if fw not in classified['databases']:
+                classified['databases'].append(fw)
+        else:
+            frameworks_corrected.append(fw)
+    
+    classified['frameworks'] = frameworks_corrected
     
     return classified
 
@@ -1154,7 +1600,7 @@ def parse_resume_structured(text):
 def parse_jd_structured(text):
     all_keywords = extract_keywords([text])
     
-    classified = classify_by_ontology_type(all_keywords)
+    classified = classify_jd_keywords(all_keywords, text)
     
     experience_years = []
     exp_patterns = [
@@ -1186,7 +1632,7 @@ def parse_jd_structured(text):
     if responsibilities_section:
         resp_text = responsibilities_section.group()
         resp_skills = extract_keywords([resp_text])
-        resp_classified = classify_by_ontology_type(resp_skills)
+        resp_classified = classify_jd_keywords(resp_skills, text)
         responsibility_tech_terms = (
             resp_classified['technical_skills'] +
             resp_classified['frameworks'] +
@@ -1199,7 +1645,7 @@ def parse_jd_structured(text):
     if nice_to_have_section:
         nice_section_text = nice_to_have_section.group()
         nice_skills = extract_keywords([nice_section_text])
-        nice_classified = classify_by_ontology_type(nice_skills)
+        nice_classified = classify_jd_keywords(nice_skills, text)
         nice_to_have_skills = (
             nice_classified['technical_skills'] +
             nice_classified['frameworks'] +

@@ -8,3 +8,9 @@ pandas
 scikit-learn
 python-multipart
 spacy
+nltk
+passlib
+bcrypt==3.2.2
+python-jose[cryptography]
+sqlalchemy
+pydantic[email]
