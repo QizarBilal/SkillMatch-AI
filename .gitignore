@@ -33,6 +33,11 @@ Thumbs.db
 # Dataset
 backend/dataset_store.csv
 
+# Old Database Files (Replaced by MongoDB)
+backend/skillmatch.db
+backend/database.py
+backend/migrate_database.py
+
 # Environment variables
 .env
 .env.local

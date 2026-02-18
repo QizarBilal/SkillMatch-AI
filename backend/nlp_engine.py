@@ -131,7 +131,10 @@ generic_reject_list = {
     "years", "datasets", "predictable",
     "friendly", "enthusiasts",
     "task", "ensure", "standards", "upwork", "responsible",
-    "ids", "st", "me", "be", "to", "and", "or", "of", "in", "less"
+    "ids", "st", "me", "be", "to", "and", "or", "of", "in", "less",
+    "exploratory", "power", "strong", "responsive", "interactive", "reusable",
+    "scalable", "robust", "dynamic", "static", "flexible", "agile",
+    "quality", "performance", "optimization", "analysis", "design", "development"
 }
 
 tech_action_verbs = {
@@ -217,25 +220,31 @@ source_sites = {
 }
 
 def detect_sections(text):
+    section_boundaries = {}
     lines = text.split('\n')
-    section_map = {}
-    current_section = "general"
+    
+    section_headers = {
+        'summary': ['summary', 'profile', 'objective', 'about'],
+        'experience': ['experience', 'work experience', 'employment', 'work history'],
+        'education': ['education', 'academic', 'qualification'],
+        'skills': ['skills', 'technical skills', 'competencies', 'expertise'],
+        'projects': ['projects', 'personal projects'],
+        'certifications': ['certifications', 'certificates', 'credentials']
+    }
     
     for i, line in enumerate(lines):
-        line_lower = line.strip().lower()
-        if len(line_lower) < 30 and len(line_lower) > 0:
-            for priority_sec in priority_sections:
-                if priority_sec in line_lower:
-                    current_section = priority_sec
-                    section_map[i] = current_section
-                    break
-            for low_sec in low_priority_sections:
-                if low_sec in line_lower and current_section == "general":
-                    current_section = low_sec
-                    section_map[i] = current_section
-                    break
+        line_clean = line.strip()
+        line_lower = line_clean.lower()
+        
+        if len(line_clean) < 40 and len(line_clean) > 2:
+            if line_clean.isupper() or (line_clean and line_clean[0].isupper() and ':' not in line_clean):
+                for section_type, headers in section_headers.items():
+                    for header in headers:
+                        if header in line_lower and len(line_lower) < 30:
+                            section_boundaries[i] = section_type
+                            break
     
-    return section_map
+    return section_boundaries
 
 def get_section_priority(text_fragment, section_map):
     text_lower = text_fragment.lower()
@@ -880,7 +889,9 @@ def extract_phone(text):
     return ""
 
 def extract_location(text):
-    location_pattern = re.search(r'(?i)(?:location|address|city|place)\s*[:|\-|–]\s*([^\n]+)', text)
+    contact_section = text[:800]
+    
+    location_pattern = re.search(r'(?i)(?:location|address|city|place)\s*[:|\-|–]\s*([^\n]+)', contact_section)
     if location_pattern:
         location_text = location_pattern.group(1).strip()
         location_text = re.sub(r'[\(\)\[\]\{\}]', '', location_text)
@@ -922,49 +933,55 @@ def extract_location(text):
         location_text = ' '.join(valid_words).strip()
         location_text = re.sub(r'\s+', ' ', location_text).strip()
         
-        if location_text and ',' in location_text and 5 <= len(location_text) <= 80:
+        if location_text and 5 <= len(location_text) <= 80:
             return location_text
     
-    city_state_pattern = re.search(r'([A-Z][a-zA-Z\s]+),\s*([A-Z][a-zA-Z\s]+),?\s*(India|USA|UK|Canada)?', text)
-    if city_state_pattern:
-        location_parts = [p.strip() for p in city_state_pattern.groups() if p]
-        location_result = ', '.join(location_parts)
-        if not re.search(r'@|http|www|Email|Phone', location_result):
-            return location_result
+    if nlp:
+        doc = nlp(contact_section)
+        gpe_entities = []
+        
+        for ent in doc.ents:
+            if ent.label_ in ['GPE', 'LOC']:
+                gpe_lower = ent.text.lower()
+                if gpe_lower not in technical_ontology and len(ent.text.split()) <= 3:
+                    has_contact_nearby = False
+                    for token in doc:
+                        if token.i >= ent.start - 20 and token.i <= ent.end + 20:
+                            if re.match(r'^\+?\d[\d\-\(\)\s]{7,}$', token.text) or '@' in token.text:
+                                has_contact_nearby = True
+                                break
+                    
+                    if has_contact_nearby or ent.start_char < 300:
+                        gpe_entities.append(ent.text)
+        
+        if gpe_entities:
+            unique_gpe = []
+            for gpe in gpe_entities:
+                if gpe not in unique_gpe:
+                    unique_gpe.append(gpe)
+            return ', '.join(unique_gpe[:3])
     
-    if not nlp:
-        return ""
-    
-    doc = nlp(text[:50000])
-    locations = []
-    for ent in doc.ents:
-        if ent.label_ in ['GPE', 'LOC']:
-            loc_lower = ent.text.lower()
-            if loc_lower not in technical_ontology and len(ent.text.split()) <= 3:
-                locations.append(ent.text)
-    
-    return locations[0] if locations else ""
+    return ""
 
 def extract_name(text):
-    if not nlp:
-        lines = text.split('\n')
-        for line in lines[:5]:
-            line_clean = line.strip()
-            if 2 <= len(line_clean.split()) <= 4 and len(line_clean) < 50:
-                if not re.search(r'@|http|www|\d{3}', line_clean):
-                    return line_clean
-        return ""
+    header_text = text[:500]
     
-    doc = nlp(text[:5000])
-    for ent in doc.ents:
-        if ent.label_ == 'PERSON':
-            return ent.text
+    if nlp:
+        doc = nlp(header_text)
+        for ent in doc.ents:
+            if ent.label_ == 'PERSON' and ent.start_char < 300:
+                words = ent.text.split()
+                if 2 <= len(words) <= 5:
+                    is_job_title = any(indicator in ent.text.lower() for indicator in job_title_indicators)
+                    has_summary_words = any(word in ent.text.lower() for word in ['summary', 'profile', 'passionate', 'enthusiastic'])
+                    if not is_job_title and not has_summary_words:
+                        return ent.text
     
-    lines = text.split('\n')
-    for line in lines[:5]:
+    lines = header_text.split('\n')
+    for line in lines[:3]:
         line_clean = line.strip()
-        if 2 <= len(line_clean.split()) <= 4 and len(line_clean) < 50:
-            if not re.search(r'@|http|www|\d{3}', line_clean):
+        if 2 <= len(line_clean.split()) <= 5 and len(line_clean) < 50:
+            if not re.search(r'@|http|www|\d{3}|engineer|developer|designer|analyst', line_clean.lower()):
                 return line_clean
     
     return ""
@@ -1220,6 +1237,136 @@ def extract_certifications(text):
                         certifications.append(line_clean)
     
     return certifications[:5]
+
+def extract_education_entries(text):
+    education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
+    if not education_section:
+        return []
+    
+    section_text = education_section.group()
+    lines = section_text.split('\n')
+    
+    entries = []
+    current_entry = {'degree': '', 'field': '', 'institution': '', 'year': ''}
+    
+    degree_patterns = [
+        (r'(?i)\b(bachelor|b\.?s\.?|b\.?a\.?|b\.?e\.?|b\.?tech|btech|bsc)\b', 'Bachelor'),
+        (r'(?i)\b(master|m\.?s\.?|m\.?a\.?|m\.?e\.?|m\.?tech|mtech|msc)\b', 'Master'),
+        (r'(?i)\b(phd|ph\.d|doctorate)\b', 'PhD'),
+        (r'(?i)\b(diploma)\b', 'Diploma'),
+        (r'(?i)\b(mba|m\.b\.a)\b', 'MBA')
+    ]
+    
+    field_keywords = ['computer science', 'information technology', 'engineering', 'business', 'science', 'arts', 'cse', 'ece', 'eee', 'mechanical', 'civil', 'electrical']
+    institution_keywords = ['university', 'college', 'institute', 'school']
+    
+    for line in lines:
+        line_clean = line.strip()
+        line_lower = line_clean.lower()
+        
+        if len(line_clean) < 5:
+            continue
+        
+        degree_found = None
+        for pattern, degree_type in degree_patterns:
+            if re.search(pattern, line_lower):
+                degree_found = degree_type
+                break
+        
+        field_found = None
+        for field in field_keywords:
+            if field in line_lower:
+                field_found = field.title()
+                break
+        
+        institution_found = None
+        if any(keyword in line_lower for keyword in institution_keywords):
+            institution_found = line_clean
+        
+        year_match = re.findall(r'\b(19|20)\d{2}\b', line_clean)
+        year_found = year_match[-1] if year_match else None
+        
+        if degree_found or field_found or institution_found or year_found:
+            if current_entry['degree'] or current_entry['field'] or current_entry['institution'] or current_entry['year']:
+                if degree_found and not current_entry['degree']:
+                    current_entry['degree'] = degree_found
+                if field_found and not current_entry['field']:
+                    current_entry['field'] = field_found
+                if institution_found and not current_entry['institution']:
+                    current_entry['institution'] = institution_found
+                if year_found and not current_entry['year']:
+                    current_entry['year'] = year_found
+            else:
+                if degree_found:
+                    current_entry['degree'] = degree_found
+                if field_found:
+                    current_entry['field'] = field_found
+                if institution_found:
+                    current_entry['institution'] = institution_found
+                if year_found:
+                    current_entry['year'] = year_found
+            
+            if current_entry['degree'] and current_entry['institution']:
+                entries.append(current_entry.copy())
+                current_entry = {'degree': '', 'field': '', 'institution': '', 'year': ''}
+    
+    if current_entry['degree'] or current_entry['institution']:
+        entries.append(current_entry)
+    
+    return entries[:3]
+
+def extract_experience_entries(text):
+    experience_section = re.search(r'(?i)(?:experience|work\\s+experience).*?(?=\\n(?:education|projects|skills|certifications)|\\Z)', text, re.DOTALL)
+    if not experience_section:
+        return []
+    
+    section_text = experience_section.group()
+    lines = section_text.split('\\n')
+    
+    entries = []
+    current_entry = {'role': '', 'company': '', 'duration': '', 'responsibilities': [], 'skills': []}
+    
+    role_indicators = ['engineer', 'developer', 'analyst', 'scientist', 'manager', 'architect', 'designer', 'lead', 'consultant', 'intern']
+    
+    for i, line in enumerate(lines):
+        line_clean = line.strip()
+        line_lower = line_clean.lower()
+        
+        if len(line_clean) < 3:
+            if current_entry['role']:
+                entries.append(current_entry.copy())
+                current_entry = {'role': '', 'company': '', 'duration': '', 'responsibilities': [], 'skills': []}
+            continue
+        
+        is_role = any(indicator in line_lower for indicator in role_indicators) and len(line_clean.split()) <= 8
+        year_range = re.search(r'\\b(\\d{4})\\s*-\\s*(\\d{4}|present|current)\\b', line_lower)
+        is_bullet = line_clean.startswith('•') or line_clean.startswith('-') or line_clean.startswith('*')
+        
+        if is_role and not current_entry['role']:
+            current_entry['role'] = line_clean
+        elif year_range and not current_entry['duration']:
+            current_entry['duration'] = year_range.group()
+        elif is_bullet and current_entry['role']:
+            responsibility = line_clean.lstrip('•-* ').strip()
+            current_entry['responsibilities'].append(responsibility)
+            
+            for tech_term in technical_ontology:
+                if tech_term in responsibility.lower():
+                    if tech_term not in current_entry['skills']:
+                        current_entry['skills'].append(tech_term)
+        elif nlp and not current_entry['company'] and current_entry['role']:
+            doc = nlp(line_clean)
+            for ent in doc.ents:
+                if ent.label_ == 'ORG':
+                    org_lower = ent.text.lower()
+                    if org_lower not in technical_ontology:
+                        current_entry['company'] = ent.text
+                        break
+    
+    if current_entry['role']:
+        entries.append(current_entry)
+    
+    return entries[:5]
 
 def split_compound_phrases(phrases):
     expanded = set()
@@ -1558,6 +1705,9 @@ def parse_resume_structured(text):
     raw_projects = extract_projects(text)
     raw_certs = extract_certifications(text)
     
+    education_entries = extract_education_entries(text)
+    experience_entries = extract_experience_entries(text)
+    
     resume_data = {
         'candidate_name': extract_name(text),
         'email': extract_email(text),
@@ -1578,7 +1728,9 @@ def parse_resume_structured(text):
         'project_titles': clean_extracted_list(raw_projects, 5),
         'project_technologies': [],
         'certifications': clean_extracted_list(raw_certs, 5),
-        'soft_skills': candidate_soft_skills[:10]
+        'soft_skills': candidate_soft_skills[:10],
+        'education_entries': education_entries,
+        'experience_entries': experience_entries
     }
     
     project_section_match = re.search(r'(?i)projects?.*?(?=\n[A-Z]|\Z)', text, re.DOTALL)

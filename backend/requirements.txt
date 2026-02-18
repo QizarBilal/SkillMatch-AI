@@ -4,6 +4,7 @@ pdfplumber
 python-docx
 pytesseract
 pillow
+PyMuPDF
 pandas
 scikit-learn
 python-multipart
@@ -14,3 +15,5 @@ bcrypt==3.2.2
 python-jose[cryptography]
 sqlalchemy
 pydantic[email]
+pymongo
+motor
