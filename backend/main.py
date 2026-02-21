@@ -23,9 +23,14 @@ from admin import (
 from mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection
 import pymongo.errors
 import warnings
+import os
+import platform
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Set tesseract path based on environment
+if platform.system() == 'Windows':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# On Linux/Docker, tesseract is in PATH by default
 
 app = FastAPI()
 
