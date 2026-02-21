@@ -469,15 +469,7 @@ async def analyze(
         jd_structured['required_languages'] = []
         jd_structured['required_databases'] = []
 
-    resume_profile_obj = { 
-        jd_structured['required_frameworks'] + 
-        jd_structured['required_tools'] + 
-        jd_structured['required_languages'] +
-        jd_structured['required_databases']
-    )
-    
-    all_jd_keywords = (
-        jd_structured['required_skills'] +
+    resume_profile_obj = {
         'candidate_name': resume_structured['candidate_name'],
         'email': resume_structured['email'],
         'phone': resume_structured['phone'],
