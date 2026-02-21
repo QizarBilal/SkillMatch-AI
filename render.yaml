@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: skillmatch-ai
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: MONGO_USERNAME
+        sync: false
+      - key: MONGO_PASSWORD
+        sync: false
+      - key: MONGO_CLUSTER
+        sync: false
+      - key: MONGO_DATABASE
+        value: SkillMatch
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /health
+    autoDeploy: true

@@ -836,6 +836,7 @@ export default function Dashboard() {
   const [jdInputMode, setJdInputMode] = useState("text")
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [uploadHover, setUploadHover] = useState(false)
   const [jdUploadHover, setJdUploadHover] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -857,6 +858,27 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   const userEmail = localStorage.getItem('user_email') || ''
+
+  useEffect(() => {
+    checkAdminStatus()
+  }, [])
+
+  const checkAdminStatus = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/admin/validate', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setIsAdmin(data.is_admin)
+      }
+    } catch (error) {
+      console.error('Admin check error:', error)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -1284,9 +1306,17 @@ export default function Dashboard() {
       <div style={styles.nav}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={styles.logo}>SkillMatch AI</div>
-          <span style={styles.tagline}>Milestone-2 NLP Pipeline</span>
+          <span style={styles.tagline}>Where Skills Meet Opportunities</span>
         </div>
         <div style={styles.navRight}>
+          {isAdmin && (
+            <button 
+              onClick={() => navigate('/admin')}
+              style={{padding: '8px 16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '8px', color: '#8b5cf6', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.3s ease'}}
+            >
+              Admin Dashboard
+            </button>
+          )}
           <div style={styles.userEmail}>{userEmail}</div>
           <button style={styles.logoutBtn} onClick={handleLogout}>Logout</button>
         </div>
@@ -1739,140 +1769,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {result.comparison && (
-                <div 
-                  style={{
-                    ...styles.card,
-                    ...(hoveredCard === 'comparison' ? styles.cardHover : {}),
-                    gridColumn: '1 / -1'
-                  }}
-                  onMouseEnter={() => setHoveredCard('comparison')}
-                  onMouseLeave={() => setHoveredCard(null)}
-                >
-                  <div style={styles.sectionTitle}>
-                    <span>⚖️</span> Profile Comparison Analysis
-                  </div>
-
-                  <div style={{marginBottom: '24px', padding: '16px', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.3)'}}>
-                    <div style={{fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Overall Match</div>
-                    <div style={{fontSize: '28px', color: '#4ade80', fontWeight: '700'}}>
-                      {result.comparison.match_percentage?.toFixed(1)}%
-                    </div>
-                    {result.comparison.recommendation && (
-                      <div style={{marginTop: '12px', fontSize: '16px', fontWeight: '600', color: result.comparison.recommendation === 'Good Fit' ? '#4ade80' : result.comparison.recommendation === 'Partial Fit' ? '#fb923c' : '#ef4444'}}>
-                        {result.comparison.recommendation === 'Good Fit' && '✅ '}
-                        {result.comparison.recommendation === 'Partial Fit' && '⚠️ '}
-                        {result.comparison.recommendation === 'Not Fit' && '❌ '}
-                        {result.comparison.recommendation}
-                      </div>
-                    )}
-                  </div>
-
-                  {result.comparison.matched_skills?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Skills</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.matched_skills.map(s => (
-                          <span key={s} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.missing_skills?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Skills</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.missing_skills.map(s => (
-                          <span key={s} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.matched_languages?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Languages</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.matched_languages.map(l => (
-                          <span key={l} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{l}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.missing_languages?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Languages</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.missing_languages.map(l => (
-                          <span key={l} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{l}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.matched_frameworks?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Frameworks</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.matched_frameworks.map(f => (
-                          <span key={f} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{f}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.missing_frameworks?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Frameworks</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.missing_frameworks.map(f => (
-                          <span key={f} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{f}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.matched_tools?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Tools</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.matched_tools.map(t => (
-                          <span key={t} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.comparison.missing_tools?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Tools</div>
-                      <div style={styles.chipContainer}>
-                        {result.comparison.missing_tools.map(t => (
-                          <span key={t} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px'}}>
-                    <div style={{padding: '16px', background: result.comparison.experience_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.experience_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
-                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Experience Match</div>
-                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.experience_match ? '#4ade80' : '#ef4444'}}>
-                        {result.comparison.experience_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
-                      </div>
-                    </div>
-                    <div style={{padding: '16px', background: result.comparison.education_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.education_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
-                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Education Match</div>
-                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.education_match ? '#4ade80' : '#ef4444'}}>
-                        {result.comparison.education_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div 
                 style={{
                   ...styles.card,
@@ -1946,6 +1842,143 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+
+              {result.comparison && (
+                <div 
+                  style={{
+                    ...styles.card,
+                    ...(hoveredCard === 'comparison' ? styles.cardHover : {}),
+                    gridColumn: '1 / -1'
+                  }}
+                  onMouseEnter={() => setHoveredCard('comparison')}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  <div style={styles.sectionTitle}>
+                    <span>⚖️</span> Profile Comparison Analysis
+                  </div>
+
+                  <div style={{marginBottom: '24px', padding: '16px', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.3)'}}>
+                    <div style={{fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Core Match Percentage</div>
+                    <div style={{fontSize: '28px', color: '#4ade80', fontWeight: '700'}}>
+                      {result.comparison.match_percentage !== undefined ? result.comparison.match_percentage.toFixed(1) : '0.0'}%
+                    </div>
+                    {result.comparison.recommendation && (
+                      <div style={{marginTop: '12px', fontSize: '16px', fontWeight: '600', color: result.comparison.recommendation.includes('Strong Fit') || result.comparison.recommendation.includes('Good Skill Match') ? '#4ade80' : result.comparison.recommendation.includes('Partial Match') ? '#fb923c' : '#ef4444'}}>
+                        {(result.comparison.recommendation.includes('Strong Fit') || result.comparison.recommendation.includes('Good Skill Match')) && '✅ '}
+                        {result.comparison.recommendation.includes('Partial Match') && '⚠️ '}
+                        {result.comparison.recommendation.includes('Weak Match') && '❌ '}
+                        {result.comparison.recommendation}
+                      </div>
+                    )}
+                  </div>
+
+                  {result.comparison.experience_gap_warning && (
+                    <div style={{marginBottom: '20px', padding: '14px', background: 'rgba(251, 146, 60, 0.1)', borderRadius: '8px', border: '1px solid rgba(251, 146, 60, 0.3)'}}>
+                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                        <span>⚠️</span>
+                        <span>Experience Gap Warning</span>
+                      </div>
+                      <div style={{fontSize: '13px', color: '#cbd5e1', lineHeight: '1.5'}}>
+                        {result.comparison.experience_gap_warning}
+                      </div>
+                    </div>
+                  )}
+
+                  {result.comparison.matched_skills?.length > 0 && (
+                    <div style={{marginBottom: '20px'}}>
+                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Core Skills</div>
+                      <div style={styles.chipContainer}>
+                        {result.comparison.matched_skills.map(s => (
+                          <span key={s} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {result.comparison.missing_skills?.length > 0 && (
+                    <div style={{marginBottom: '20px'}}>
+                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Core Skills</div>
+                      <div style={styles.chipContainer}>
+                        {result.comparison.missing_skills.map(s => (
+                          <span key={s} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {result.comparison.additional_skills?.length > 0 && (
+                    <div style={{marginBottom: '20px'}}>
+                      <div style={{fontSize: '13px', color: '#8b5cf6', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✨ Additional Skills (Bonus)</div>
+                      <div style={styles.chipContainer}>
+                        {result.comparison.additional_skills.map(s => (
+                          <span key={s} style={{...styles.skillChip, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid rgba(139, 92, 246, 0.4)', color: '#8b5cf6'}}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px'}}>
+                    <div style={{padding: '16px', background: result.comparison.experience_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.experience_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
+                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Experience Match</div>
+                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.experience_match ? '#4ade80' : '#ef4444'}}>
+                        {result.comparison.experience_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
+                      </div>
+                    </div>
+                    <div style={{padding: '16px', background: result.comparison.education_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.education_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
+                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Education Match</div>
+                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.education_match ? '#4ade80' : '#ef4444'}}>
+                        {result.comparison.education_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {result.skill_suggestions && result.skill_suggestions.suggested_skills?.length > 0 && (
+                <div 
+                  style={{
+                    ...styles.card,
+                    ...(hoveredCard === 'suggestions' ? styles.cardHover : {}),
+                    gridColumn: '1 / -1'
+                  }}
+                  onMouseEnter={() => setHoveredCard('suggestions')}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  <div style={styles.sectionTitle}>
+                    <span>💡</span> Skill Recommendations
+                  </div>
+
+                  <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)'}}>
+                    <div style={{fontSize: '14px', color: '#cbd5e1'}}>
+                      Based on the job requirements and industry trends, we recommend learning these skills to improve your match score:
+                    </div>
+                  </div>
+
+                  <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px'}}>
+                    {result.skill_suggestions.suggested_skills.map((suggestion, idx) => (
+                      <div 
+                        key={idx}
+                        style={{
+                          padding: '16px',
+                          background: 'rgba(139, 92, 246, 0.08)',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(139, 92, 246, 0.2)',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px'}}>
+                          <span style={{fontSize: '15px', fontWeight: '700', color: '#8b5cf6'}}>{suggestion.skill}</span>
+                          {suggestion.priority === 'high' && (
+                            <span style={{fontSize: '10px', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderRadius: '10px', fontWeight: '600'}}>HIGH</span>
+                          )}
+                        </div>
+                        <div style={{fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontStyle: 'italic'}}>{suggestion.reason}</div>
+                        <div style={{fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6'}}>{suggestion.explanation}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

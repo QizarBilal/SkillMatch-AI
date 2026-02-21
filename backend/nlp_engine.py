@@ -249,13 +249,15 @@ def detect_sections(text):
 def get_section_priority(text_fragment, section_map):
     text_lower = text_fragment.lower()
     
-    for section_name in strict_reject_sections:
-        if section_name in text_lower:
-            return -1.0
-    
+    # Check priority sections FIRST (skills, technical skills, etc.)
     for section_name in priority_sections:
         if section_name in text_lower:
             return 2.0
+    
+    # Then check reject sections (but priority sections already took precedence)
+    for section_name in strict_reject_sections:
+        if section_name in text_lower:
+            return -1.0
     
     for section_name in low_priority_sections:
         if section_name in text_lower:
@@ -1691,6 +1693,33 @@ def parse_resume_structured(text):
     
     classified = classify_by_ontology_type(all_skills)
     
+    # FALLBACK: If classification is too strict and returns empty/junk arrays,
+    # populate with extracted skills directly to ensure matching works
+    junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application', 
+                  'system', 'technology', 'technical', 'digital', 'online', 'virtual', 'remote', 'hybrid',
+                  'go', 'excel', 'work', 'job', 'role', 'team', 'company', 'business', 'project',
+                  'artificial', 'intelligence', 'chrome', 'edge', 'firefox', 'safari', 'studio', 'visual',
+                  'code', 'devtools', 'tools', 'platforms', 'notebook', 'development'}
+    
+    # Filter out junk terms from classified results
+    for category in ['technical_skills', 'languages', 'frameworks', 'tools', 'databases']:
+        classified[category] = [skill for skill in classified[category] if skill.lower() not in junk_terms]
+    
+    total_classified = (
+        len(classified['technical_skills']) + 
+        len(classified['languages']) + 
+        len(classified['frameworks']) + 
+        len(classified['tools']) + 
+        len(classified['databases'])
+    )
+    
+    # Filter extracted skills to remove junk before fallback
+    clean_extracted_skills = [s for s in all_skills if s.lower() not in junk_terms]
+    
+    if total_classified == 0 and len(clean_extracted_skills) > 0:
+        # Classification filtered out everything - use raw extracted skills as fallback
+        classified['technical_skills'] = clean_extracted_skills[:15]
+    
     candidate_soft_skills = []
     text_lower = text.lower()
     for soft_skill in soft_skills:
@@ -1753,6 +1782,33 @@ def parse_jd_structured(text):
     all_keywords = extract_keywords([text])
     
     classified = classify_jd_keywords(all_keywords, text)
+    
+    # FALLBACK: If classification is too strict and returns empty/junk arrays,
+    # populate with extracted keywords directly to ensure matching works
+    junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application',
+                  'system', 'technology', 'technical', 'digital', 'online', 'virtual', 'remote', 'hybrid',
+                  'go', 'excel', 'work', 'job', 'role', 'team', 'company', 'business', 'project',
+                  'artificial', 'intelligence', 'chrome', 'edge', 'firefox', 'safari', 'studio', 'visual',
+                  'code', 'devtools', 'tools', 'platforms', 'notebook', 'development'}
+    
+    # Filter out junk terms from classified results
+    for category in ['technical_skills', 'languages', 'frameworks', 'tools', 'databases']:
+        classified[category] = [skill for skill in classified[category] if skill.lower() not in junk_terms]
+    
+    total_classified = (
+        len(classified['technical_skills']) + 
+        len(classified['languages']) + 
+        len(classified['frameworks']) + 
+        len(classified['tools']) + 
+        len(classified['databases'])
+    )
+    
+    # Filter extracted keywords to remove junk before fallback
+    clean_extracted_keywords = [k for k in all_keywords if k.lower() not in junk_terms]
+    
+    if total_classified == 0 and len(clean_extracted_keywords) > 0:
+        # Classification filtered out everything - use raw keywords as fallback
+        classified['technical_skills'] = clean_extracted_keywords[:15]
     
     experience_years = []
     exp_patterns = [

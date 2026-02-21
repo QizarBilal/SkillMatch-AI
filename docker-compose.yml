@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # SkillMatch AI Application
+  skillmatch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skillmatch-app
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_USERNAME=${MONGO_USERNAME}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_CLUSTER=${MONGO_CLUSTER}
+      - MONGO_DATABASE=${MONGO_DATABASE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    env_file:
+      - .env
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - skillmatch-network
+
+networks:
+  skillmatch-network:
+    driver: bridge
+
+volumes:
+  uploads:
+    driver: local

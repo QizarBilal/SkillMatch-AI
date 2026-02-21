@@ -2,46 +2,204 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+CANONICAL_SKILL_MAP = {
+    # Core web technologies
+    'html5': 'html',
+    'html 5': 'html',
+    'css3': 'css',
+    'css 3': 'css',
+    
+    # JavaScript ecosystem
+    'javascript': 'javascript',
+    'js': 'javascript',
+    'typescript': 'typescript',
+    'ts': 'typescript',
+    'typescript js': 'typescript',
+    
+    # React family
+    'react js': 'react',
+    'react.js': 'react',
+    'reactjs': 'react',
+    'react native': 'react native',
+    'next js': 'next.js',
+    'next.js': 'next.js',
+    'nextjs': 'next.js',
+    'gatsby': 'gatsby',
+    'gatsby js': 'gatsby',
+    
+    # Vue ecosystem
+    'vue js': 'vue',
+    'vue.js': 'vue',
+    'vuejs': 'vue',
+    'nuxt': 'nuxt.js',
+    'nuxt js': 'nuxt.js',
+    'nuxt.js': 'nuxt.js',
+    
+    # Angular
+    'angular': 'angular',
+    'angular js': 'angular',
+    'angularjs': 'angular',
+    
+    # Node.js
+    'node js': 'node.js',
+    'node.js': 'node.js',
+    'nodejs': 'node.js',
+    'node': 'node.js',
+    
+    # Express
+    'express js': 'express',
+    'expressjs': 'express',
+    'express.js': 'express',
+    
+    # CSS frameworks
+    'tailwindcss': 'tailwind',
+    'tailwind css': 'tailwind',
+    'bootstrap': 'bootstrap',
+    'material ui': 'material-ui',
+    'mui': 'material-ui',
+    'sass': 'sass',
+    'scss': 'sass',
+    'less': 'less',
+    
+    # Version control
+    'git hub': 'git',
+    'github': 'git',
+    'gitlab': 'git',
+    'bitbucket': 'git',
+    
+    # Databases
+    'mongo db': 'mongodb',
+    'mongo': 'mongodb',
+    'postgresql': 'postgresql',
+    'postgres': 'postgresql',
+    'mysql': 'mysql',
+    'sql': 'sql',
+    'nosql': 'nosql',
+    
+    # APIs
+    'rest api': 'rest',
+    'restful': 'rest',
+    'restful api': 'rest',
+    'graphql': 'graphql',
+    
+    # DevOps
+    'docker': 'docker',
+    'kubernetes': 'kubernetes',
+    'k8s': 'kubernetes',
+    'ci/cd': 'ci/cd',
+    'cicd': 'ci/cd',
+    
+    # Cloud platforms
+    'aws': 'aws',
+    'amazon web services': 'aws',
+    'azure': 'azure',
+    'microsoft azure': 'azure',
+    'gcp': 'gcp',
+    'google cloud': 'gcp',
+    'google cloud platform': 'gcp',
+    
+    # Design tools
+    'figma': 'figma',
+    'figma design': 'figma',
+    'sketch': 'sketch',
+    'adobe xd': 'adobe xd',
+    'xd': 'adobe xd',
+    
+    # Build tools
+    'webpack': 'webpack',
+    'vite': 'vite',
+    'parcel': 'parcel',
+    'rollup': 'rollup',
+    
+    # State management
+    'redux': 'redux',
+    'mobx': 'mobx',
+    'vuex': 'vuex',
+    
+    # Backend frameworks
+    'django': 'django',
+    'flask': 'flask',
+    'fastapi': 'fastapi',
+    'fast api': 'fastapi',
+    'spring boot': 'spring boot',
+    'spring': 'spring boot',
+    'laravel': 'laravel',
+    
+    # Programming languages
+    'python': 'python',
+    'java': 'java',
+    'c++': 'c++',
+    'cpp': 'c++',
+    'c#': 'c#',
+    'csharp': 'c#',
+    'c sharp': 'c#',
+    'go': 'go',
+    'golang': 'go',
+    'rust': 'rust',
+    'ruby': 'ruby',
+    'php': 'php',
+    'swift': 'swift',
+    'kotlin': 'kotlin',
+    
+    # Libraries
+    'jquery': 'jquery',
+    'axios': 'axios',
+    'lodash': 'lodash'
+}
+
 SKILL_TAXONOMY = {
-    'programming_languages': {
-        'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'csharp', 'go', 'golang',
-        'rust', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'r', 'perl', 'matlab', 'sql', 'c'
-    },
-    'markup_languages': {
-        'html', 'html5', 'css', 'css3', 'xml', 'markdown'
+    'languages': {
+        'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'go', 
+        'rust', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'r', 'c', 
+        'html', 'css', 'sql'
     },
     'frameworks': {
-        'react', 'reactjs', 'react js', 'angular', 'vue', 'vuejs', 'vue js', 'svelte',
-        'next js', 'nextjs', 'gatsby', 'ember', 'backbone', 'django', 'flask', 'fastapi',
-        'spring', 'spring boot', 'rails', 'asp net', 'dotnet', 'express', 'expressjs', 'express js',
-        'laravel', 'symfony', 'codeigniter', 'nestjs', 'nest js', 'nuxt js', 'nuxtjs'
-    },
-    'libraries': {
-        'redux', 'mobx', 'recoil', 'zustand', 'jotai', 'tensorflow', 'pytorch', 'keras',
-        'scikit learn', 'sklearn', 'pandas', 'numpy', 'scipy', 'matplotlib', 'seaborn',
-        'plotly', 'xgboost', 'lightgbm', 'catboost', 'apollo', 'prisma', 'typeorm',
-        'sequelize', 'mongoose', 'sqlalchemy', 'hibernate', 'entity framework', 'jwt',
-        'lodash', 'axios', 'jquery', 'bootstrap', 'material ui', 'mui', 'chakra ui', 'ant design',
-        'tailwind', 'tailwindcss', 'sass', 'scss', 'less'
-    },
-    'databases': {
-        'mysql', 'postgresql', 'postgres', 'mongodb', 'mongo', 'redis', 'cassandra',
-        'dynamodb', 'oracle', 'sqlite', 'mariadb', 'mssql', 'elasticsearch', 'elastic',
-        'couchdb', 'neo4j', 'firebase', 'firestore', 'supabase'
+        'react', 'angular', 'vue', 'svelte', 'next.js', 'gatsby',
+        'django', 'flask', 'fastapi', 'spring boot', 'express',
+        'laravel', 'nest.js', 'nuxt.js', 'ember', 'backbone'
     },
     'tools': {
-        'docker', 'kubernetes', 'k8s', 'git', 'github', 'gitlab', 'bitbucket', 'jenkins',
-        'circleci', 'travis ci', 'aws', 'azure', 'gcp', 'google cloud', 'lambda',
-        'terraform', 'ansible', 'chef', 'puppet', 'webpack', 'vite', 'rollup', 'babel',
-        'npm', 'yarn', 'postman', 'insomnia', 'swagger', 'jira', 'confluence', 'trello',
-        'figma', 'sketch', 'adobe xd', 'vscode', 'intellij', 'pycharm', 'visual studio'
+        'docker', 'kubernetes', 'git', 'jenkins', 'aws', 'azure', 'gcp',
+        'terraform', 'ansible', 'webpack', 'vite', 'babel', 'npm', 'yarn',
+        'postman', 'swagger', 'jira', 'figma', 'sketch', 'adobe xd',
+        'vscode', 'intellij'
+    },
+    'databases': {
+        'mysql', 'postgresql', 'mongodb', 'redis', 'cassandra',
+        'dynamodb', 'oracle', 'sqlite', 'elasticsearch', 'firebase'
+    },
+    'libraries': {
+        'redux', 'mobx', 'tensorflow', 'pytorch', 'keras', 'pandas',
+        'numpy', 'scikit-learn', 'jquery', 'bootstrap', 'material-ui',
+        'tailwind', 'sass', 'axios', 'lodash'
     },
     'concepts': {
-        'restful', 'rest api', 'graphql', 'grpc', 'microservices', 'agile', 'scrum',
-        'tdd', 'test driven development', 'ci/cd', 'devops', 'oop', 'solid', 'design patterns',
-        'mvc', 'mvvm', 'oauth', 'oauth2', 'websocket', 'api', 'soap'
+        # API patterns (excluded from scoring)
+        'rest', 'graphql', 'microservices', 'oauth', 'websocket',
+        # Methodologies (excluded from scoring)
+        'agile', 'scrum', 'tdd', 'devops', 'ci/cd',
+        # Design patterns (excluded from scoring)
+        'oop', 'mvc', 'mvvm', 'solid',
+        # Soft skills & descriptive terms (excluded from scoring)
+        'responsive design', 'responsive', 'ui/ux', 'ux', 'ui',
+        'performance optimization', 'optimization', 'performance',
+        'problem solving', 'problem-solving', 'communication',
+        'teamwork', 'collaboration', 'leadership',
+        'analytical', 'critical thinking', 'creativity',
+        # Generic descriptive terms (excluded from scoring)
+        'frontend', 'backend', 'fullstack', 'full-stack',
+        'web development', 'mobile development',
+        'software development', 'software engineering',
+        'best practices', 'clean code', 'code review',
+        'debugging', 'testing', 'deployment'
     }
 }
+
+def canonicalize_skill(skill):
+    if not skill:
+        return None
+    skill_lower = skill.lower().strip()
+    return CANONICAL_SKILL_MAP.get(skill_lower, skill_lower)
 
 def normalize_text(text):
     if not text:
@@ -53,20 +211,62 @@ def normalize_list(items):
         return []
     return [normalize_text(item) for item in items if item]
 
+def normalize_and_canonicalize_skills(skills):
+    canonical_skills = []
+    for skill in skills:
+        if skill:
+            canonical = canonicalize_skill(skill)
+            if canonical:
+                canonical_skills.append(canonical)
+    return list(set(canonical_skills))
+
 def classify_skill(skill):
-    skill_norm = normalize_text(skill)
-    for category, skills in SKILL_TAXONOMY.items():
-        if skill_norm in skills:
+    canonical = canonicalize_skill(skill)
+    if not canonical:
+        return None
+    
+    for category in ['languages', 'frameworks', 'tools', 'databases']:
+        if canonical in SKILL_TAXONOMY[category]:
             return category
-    return 'technical_skills'
+    
+    if canonical in SKILL_TAXONOMY.get('libraries', set()):
+        return 'libraries'
+    
+    if canonical in SKILL_TAXONOMY.get('concepts', set()):
+        return 'concepts'
+    
+    return 'other'
 
 def classify_skills_by_taxonomy(skills):
-    classified = {category: [] for category in SKILL_TAXONOMY.keys()}
-    classified['technical_skills'] = []
+    classified = {
+        'languages': [],
+        'frameworks': [],
+        'tools': [],
+        'databases': [],
+        'libraries': [],
+        'concepts': [],
+        'other': []
+    }
+    
+    # Filter out junk terms that should never be considered technical skills
+    junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 
+                  'software', 'web', 'application', 'system', 'technology'}
     
     for skill in skills:
-        category = classify_skill(skill)
-        classified[category].append(skill)
+        # Skip junk terms
+        if skill.lower() in junk_terms:
+            continue
+            
+        canonical = canonicalize_skill(skill)
+        if canonical:
+            # Double-check canonical form isn't junk
+            if canonical.lower() in junk_terms:
+                continue
+                
+            category = classify_skill(skill)
+            if category and category in classified:
+                if canonical not in classified[category]:
+                    classified[category].append(canonical)
     
     return classified
 
@@ -104,56 +304,77 @@ def calculate_weighted_score(matched, required, category_weight):
     return match_ratio * category_weight
 
 def compare_profiles(resume_profile, job_profile):
-    resume_skills_all = set()
-    resume_skills_all.update(normalize_list(resume_profile.get('technical_skills', [])))
-    resume_skills_all.update(normalize_list(resume_profile.get('programming_languages', [])))
-    resume_skills_all.update(normalize_list(resume_profile.get('frameworks', [])))
-    resume_skills_all.update(normalize_list(resume_profile.get('tools', [])))
-    resume_skills_all.update(normalize_list(resume_profile.get('databases', [])))
+    """
+    UNIFIED SKILL SET MATCHING - Compares single canonical skill sets, not category-wise.
+    Uses pure skill intersection/difference without weighted category scoring.
+    """
     
-    jd_skills_all = set()
-    jd_skills_all.update(normalize_list(job_profile.get('required_skills', [])))
-    jd_skills_all.update(normalize_list(job_profile.get('required_languages', [])))
-    jd_skills_all.update(normalize_list(job_profile.get('required_frameworks', [])))
-    jd_skills_all.update(normalize_list(job_profile.get('required_tools', [])))
-    jd_skills_all.update(normalize_list(job_profile.get('required_databases', [])))
+    # STEP 1: Build Canonical Resume Core Skill Set
+    # Collect all resume skills from various fields
+    resume_skills_raw = []
+    resume_skills_raw.extend(resume_profile.get('technical_skills', []))
+    resume_skills_raw.extend(resume_profile.get('programming_languages', []))
+    resume_skills_raw.extend(resume_profile.get('frameworks', []))
+    resume_skills_raw.extend(resume_profile.get('tools', []))
+    resume_skills_raw.extend(resume_profile.get('databases', []))
     
-    resume_classified = classify_skills_by_taxonomy(list(resume_skills_all))
-    jd_classified = classify_skills_by_taxonomy(list(jd_skills_all))
+    # Canonicalize and classify
+    resume_skills_canonical = normalize_and_canonicalize_skills(resume_skills_raw)
+    resume_classified = classify_skills_by_taxonomy(resume_skills_canonical)
     
+    # Build unified resume core skill set (languages ∪ frameworks ∪ tools ∪ databases)
+    resume_core_skills = set()
+    resume_core_skills.update(resume_classified['languages'])
+    resume_core_skills.update(resume_classified['frameworks'])
+    resume_core_skills.update(resume_classified['tools'])
+    resume_core_skills.update(resume_classified['databases'])
+    
+    # STEP 2: Build Canonical JD Required Skill Set
+    # Collect all JD required skills
+    jd_skills_raw = []
+    jd_skills_raw.extend(job_profile.get('required_skills', []))
+    jd_skills_raw.extend(job_profile.get('required_languages', []))
+    jd_skills_raw.extend(job_profile.get('required_frameworks', []))
+    jd_skills_raw.extend(job_profile.get('required_tools', []))
+    jd_skills_raw.extend(job_profile.get('required_databases', []))
+    
+    # Canonicalize and classify
+    jd_skills_canonical = normalize_and_canonicalize_skills(jd_skills_raw)
+    jd_classified = classify_skills_by_taxonomy(jd_skills_canonical)
+    
+    # Build unified JD core required set (exclude non-technical concepts)
+    jd_core_required = set()
+    jd_core_required.update(jd_classified['languages'])
+    jd_core_required.update(jd_classified['frameworks'])
+    jd_core_required.update(jd_classified['tools'])
+    jd_core_required.update(jd_classified['databases'])
+    # NOTE: Concepts are automatically excluded (they're not added to this set)
+    
+    # STEP 3: Unified Matching Logic (Simple Set Operations)
+    matched = resume_core_skills.intersection(jd_core_required)
+    missing = jd_core_required - resume_core_skills
+    additional = resume_core_skills - jd_core_required  # Bonus skills
+    
+    # STEP 4: Pure Skill Match Score (No weighted categories)
+    skill_match_ratio = len(matched) / len(jd_core_required) if len(jd_core_required) > 0 else 0.0
+    final_score = round(skill_match_ratio * 100, 2)
+    
+    # Category breakdowns (for display only, not used in scoring)
     matched_by_category = {}
     missing_by_category = {}
-    
-    for category in SKILL_TAXONOMY.keys():
+    for category in ['languages', 'frameworks', 'tools', 'databases']:
         resume_cat = set(resume_classified[category])
         jd_cat = set(jd_classified[category])
         matched_by_category[category] = list(resume_cat.intersection(jd_cat))
         missing_by_category[category] = list(jd_cat - resume_cat)
     
-    frameworks_score = calculate_weighted_score(
-        matched_by_category['frameworks'],
-        jd_classified['frameworks'],
-        0.35
-    )
+    # Category-specific ratios (for detailed display only)
+    language_ratio = len(matched_by_category['languages']) / len(jd_classified['languages']) if jd_classified['languages'] else 1.0
+    framework_ratio = len(matched_by_category['frameworks']) / len(jd_classified['frameworks']) if jd_classified['frameworks'] else 1.0
+    tool_ratio = len(matched_by_category['tools']) / len(jd_classified['tools']) if jd_classified['tools'] else 1.0
+    database_ratio = len(matched_by_category['databases']) / len(jd_classified['databases']) if jd_classified['databases'] else 1.0
     
-    languages_score = calculate_weighted_score(
-        matched_by_category['programming_languages'] + matched_by_category['markup_languages'],
-        jd_classified['programming_languages'] + jd_classified['markup_languages'],
-        0.25
-    )
-    
-    databases_score = calculate_weighted_score(
-        matched_by_category['databases'],
-        jd_classified['databases'],
-        0.10
-    )
-    
-    tools_score = calculate_weighted_score(
-        matched_by_category['tools'],
-        jd_classified['tools'],
-        0.10
-    )
-    
+    # STEP 5: Experience Handling (Does NOT affect skill score)
     resume_experience = resume_profile.get('experience_years_estimated', 0)
     jd_experience_str = job_profile.get('required_experience_years', '')
     
@@ -171,160 +392,142 @@ def compare_profiles(resume_profile, job_profile):
     else:
         jd_experience = 0
     
-    jd_domain = detect_domain(
-        job_profile.get('job_role', ''),
-        job_profile.get('required_skills', [])
-    )
+    experience_gap_years = jd_experience - resume_experience if jd_experience > 0 else 0
+    experience_gap = experience_gap_years > 0
     
-    resume_domain = detect_domain(
-        '',
-        resume_profile.get('experience_roles', []) + resume_profile.get('project_technologies', [])
-    )
+    experience_gap_warning = None
+    if experience_gap:
+        experience_gap_warning = f"Candidate has {resume_experience} years but role requires {jd_experience}+ years (gap: {experience_gap_years} years)"
     
-    domain_match = (jd_domain == resume_domain or resume_domain == 'fullstack' or jd_domain == 'general')
-    
-    experience_match = resume_experience >= jd_experience if jd_experience > 0 else True
-    
-    if not experience_match:
-        experience_score = 0.05
-    elif domain_match:
-        experience_score = 0.10
-    else:
-        experience_score = 0.05
-    
+    # Education check (informational only)
     resume_degrees = set(normalize_list(resume_profile.get('education_degrees', [])))
     jd_education = set(normalize_list(job_profile.get('required_education', [])))
     
     education_match = True
     if jd_education:
-        if 'bachelor' in ' '.join(jd_education) or 'bsc' in ' '.join(jd_education) or 'btech' in ' '.join(jd_education):
-            education_match = any('bachelor' in deg or 'bsc' in deg or 'btech' in deg or 'master' in deg or 'phd' in deg for deg in resume_degrees)
-        elif 'master' in ' '.join(jd_education):
-            education_match = any('master' in deg or 'phd' in deg for deg in resume_degrees)
+        if 'bachelor' in ' '.join(jd_education).lower() or 'bsc' in ' '.join(jd_education).lower() or 'btech' in ' '.join(jd_education).lower():
+            education_match = any('bachelor' in deg.lower() or 'bsc' in deg.lower() or 'btech' in deg.lower() or 'master' in deg.lower() or 'phd' in deg.lower() for deg in resume_degrees)
+        elif 'master' in ' '.join(jd_education).lower():
+            education_match = any('master' in deg.lower() or 'phd' in deg.lower() for deg in resume_degrees)
     
-    education_score = 0.10 if education_match else 0.05
+    # STEP 6: Recommendation Thresholds
+    # ≥80% → Strong Fit | 60-79% → Good Skill Match | 40-59% → Partial Match | <40% → Weak Match
+    if final_score >= 80:
+        if experience_gap:
+            recommendation = "Strong Fit (Experience Gap)"
+            decision_summary = f"Excellent skill match ({round(final_score)}%). {experience_gap_warning}"
+        else:
+            recommendation = "Strong Fit"
+            decision_summary = f"Highly recommended. Core skills match {round(final_score)}% with adequate experience."
     
-    final_score = (
-        frameworks_score +
-        languages_score +
-        databases_score +
-        tools_score +
-        experience_score +
-        education_score
-    ) * 100
+    elif final_score >= 60:
+        if experience_gap:
+            recommendation = "Good Skill Match (Needs Experience)"
+            decision_summary = f"Strong technical foundation ({round(final_score)}%). {experience_gap_warning}"
+        else:
+            recommendation = "Good Skill Match"
+            decision_summary = f"Good candidate. Core skills match {round(final_score)}% with suitable experience."
     
-    final_score = min(round(final_score, 2), 100.0)
+    elif final_score >= 40:
+        recommendation = "Partial Match"
+        if experience_gap:
+            decision_summary = f"Partial skill match ({round(final_score)}%). {experience_gap_warning}"
+        else:
+            decision_summary = f"Partial match ({round(final_score)}%). Missing some critical requirements."
     
+    else:
+        recommendation = "Weak Match"
+        decision_summary = f"Insufficient match ({round(final_score)}%). Missing most core technical requirements."
+    
+    # STEP 7: Build simplified output (no large category-wise missing lists)
     top_strengths = []
+    if len(matched) > 0:
+        matched_list = sorted(list(matched))
+        if len(matched_list) <= 5:
+            top_strengths.append(f"Matched core skills: {', '.join(matched_list)}")
+        else:
+            top_strengths.append(f"Matched {len(matched_list)} core skills: {', '.join(matched_list[:5])}...")
+    
     if matched_by_category['frameworks']:
-        top_strengths.append(f"Strong framework match: {', '.join(matched_by_category['frameworks'][:3])}")
-    if matched_by_category['programming_languages']:
-        top_strengths.append(f"Proficient in required languages: {', '.join(matched_by_category['programming_languages'][:3])}")
-    if matched_by_category['databases']:
-        top_strengths.append(f"Database experience: {', '.join(matched_by_category['databases'][:2])}")
-    if experience_match and domain_match:
-        top_strengths.append(f"Relevant {resume_experience}+ years in {resume_domain} domain")
+        top_strengths.append(f"Framework match: {', '.join(matched_by_category['frameworks'][:3])}")
+    if matched_by_category['languages']:
+        top_strengths.append(f"Language match: {', '.join(matched_by_category['languages'][:3])}")
+    
+    if not top_strengths:
+        top_strengths.append("Limited matching skills found")
     
     major_gaps = []
-    if missing_by_category['frameworks']:
-        major_gaps.append(f"Missing critical frameworks: {', '.join(missing_by_category['frameworks'][:3])}")
-    if missing_by_category['programming_languages']:
-        major_gaps.append(f"Missing required languages: {', '.join(missing_by_category['programming_languages'][:2])}")
-    if not experience_match:
-        major_gaps.append(f"Experience gap: {resume_experience} years vs {jd_experience} required")
-    if not domain_match:
-        major_gaps.append(f"Domain mismatch: Resume shows {resume_domain}, but role requires {jd_domain}")
-    if not education_match:
-        major_gaps.append("Education requirements not met")
+    if len(missing) > 0:
+        missing_list = sorted(list(missing))
+        if len(missing_list) <= 5:
+            major_gaps.append(f"Missing core skills: {', '.join(missing_list)}")
+        else:
+            major_gaps.append(f"Missing {len(missing_list)} core skills: {', '.join(missing_list[:5])}...")
     
     if not major_gaps:
-        major_gaps.append("No critical gaps identified")
+        major_gaps.append("No critical skill gaps identified")
     
-    experience_analysis = f"Candidate has {resume_experience} years of experience in {resume_domain} domain. "
-    if domain_match:
-        experience_analysis += f"Domain aligns well with {jd_domain} role requirements."
+    experience_analysis = f"Candidate has {resume_experience} years of experience. "
+    if experience_gap:
+        experience_analysis += f"Role requires {jd_experience}+ years."
     else:
-        experience_analysis += f"Domain ({resume_domain}) differs from required {jd_domain}, which may impact role fit."
-    
-    if final_score >= 75:
-        recommendation = "Strong Fit"
-        decision_summary = "Highly recommended for interview. Strong technical match with relevant experience."
-    elif final_score >= 50:
-        recommendation = "Moderate Fit"
-        decision_summary = "Consider for interview. Has foundational skills but gaps in critical areas."
-    elif final_score >= 30:
-        recommendation = "Low Fit"
-        decision_summary = "Not recommended. Significant gaps in required technical skills and experience."
-    else:
-        recommendation = "Not Suitable"
-        decision_summary = "Not qualified. Missing most critical requirements."
+        experience_analysis += f"Meets or exceeds the {jd_experience} years requirement."
     
     explanation = {
         'decision_summary': decision_summary,
         'top_strengths': top_strengths[:3],
         'major_gaps': major_gaps[:3],
         'experience_relevance': experience_analysis,
-        'domain_match': domain_match,
-        'jd_domain': jd_domain,
-        'resume_domain': resume_domain
+        'experience_gap_warning': experience_gap_warning,
+        'additional_skills': sorted(list(additional))[:10]
     }
     
-    matched_skills = list(resume_skills_all.intersection(jd_skills_all))
-    missing_skills = list(jd_skills_all - resume_skills_all)
-    
-    resume_languages = set(normalize_list(resume_profile.get('programming_languages', [])))
-    jd_languages = set(normalize_list(job_profile.get('required_languages', [])))
-    matched_languages = list(resume_languages.intersection(jd_languages))
-    missing_languages = list(jd_languages - resume_languages)
-    
-    resume_frameworks = set(normalize_list(resume_profile.get('frameworks', [])))
-    jd_frameworks = set(normalize_list(job_profile.get('required_frameworks', [])))
-    matched_frameworks = list(resume_frameworks.intersection(jd_frameworks))
-    missing_frameworks = list(jd_frameworks - resume_frameworks)
-    
-    resume_tools = set(normalize_list(resume_profile.get('tools', [])))
-    jd_tools = set(normalize_list(job_profile.get('required_tools', [])))
-    matched_tools = list(resume_tools.intersection(jd_tools))
-    missing_tools = list(jd_tools - resume_tools)
-    
-    resume_databases = set(normalize_list(resume_profile.get('databases', [])))
-    jd_databases = set(normalize_list(job_profile.get('required_databases', [])))
-    matched_databases = list(resume_databases.intersection(jd_databases))
-    missing_databases = list(jd_databases - resume_databases)
-    
-    framework_ratio = (len(matched_frameworks) / len(jd_frameworks) * 100) if jd_frameworks else 0
-    language_ratio = (len(matched_languages) / len(jd_languages) * 100) if jd_languages else 0
-    database_ratio = (len(matched_databases) / len(jd_databases) * 100) if jd_databases else 0
-    tool_ratio = (len(matched_tools) / len(jd_tools) * 100) if jd_tools else 0
-    
+    # STEP 8: Simplified Output Structure
     return {
-        'matched_skills': sorted(matched_skills),
-        'missing_skills': sorted(missing_skills),
-        'matched_languages': sorted(matched_languages),
-        'missing_languages': sorted(missing_languages),
-        'matched_frameworks': sorted(matched_frameworks),
-        'missing_frameworks': sorted(missing_frameworks),
-        'matched_tools': sorted(matched_tools),
-        'missing_tools': sorted(missing_tools),
-        'matched_databases': sorted(matched_databases),
-        'missing_databases': sorted(missing_databases),
-        'experience_match': experience_match,
+        # Core unified skill matching
+        'matched_skills': sorted(list(matched)),
+        'missing_skills': sorted(list(missing)),
+        'additional_skills': sorted(list(additional)),
+        
+        # Category-level breakdowns (for display only)
+        'matched_languages': matched_by_category['languages'],
+        'missing_languages': missing_by_category['languages'],
+        'matched_frameworks': matched_by_category['frameworks'],
+        'missing_frameworks': missing_by_category['frameworks'],
+        'matched_tools': matched_by_category['tools'],
+        'missing_tools': missing_by_category['tools'],
+        'matched_databases': matched_by_category['databases'],
+        'missing_databases': missing_by_category['databases'],
+        
+        # Experience and education
+        'experience_match': not experience_gap,
+        'experience_gap_warning': experience_gap_warning,
+        'experience_gap': experience_gap,
         'education_match': education_match,
-        'match_percentage': final_score,
-        'framework_ratio': round(framework_ratio, 2),
-        'language_ratio': round(language_ratio, 2),
-        'database_ratio': round(database_ratio, 2),
-        'tool_ratio': round(tool_ratio, 2),
-        'recommendation': recommendation,
         'resume_experience_years': resume_experience,
         'required_experience_years': jd_experience,
+        
+        # Scoring
+        'match_percentage': final_score,
+        'skill_match_ratio': round(skill_match_ratio * 100, 2),
+        'language_ratio': round(language_ratio * 100, 2),
+        'framework_ratio': round(framework_ratio * 100, 2),
+        'tool_ratio': round(tool_ratio * 100, 2),
+        'database_ratio': round(database_ratio * 100, 2),
+        
+        # Recommendation
+        'recommendation': recommendation,
         'explanation': explanation,
+        
+        # Scoring details
         'weighted_scores': {
-            'frameworks': round(frameworks_score * 100, 2),
-            'languages': round(languages_score * 100, 2),
-            'databases': round(databases_score * 100, 2),
-            'tools': round(tools_score * 100, 2),
-            'experience': round(experience_score * 100, 2),
-            'education': round(education_score * 100, 2)
+            'skill_match_score': round(skill_match_ratio * 100, 2),
+            'matched_count': len(matched),
+            'required_count': len(jd_core_required),
+            'framework_match': round(framework_ratio * 100, 2),
+            'tool_match': round(tool_ratio * 100, 2),
+            'language_match': round(language_ratio * 100, 2),
+            'database_match': round(database_ratio * 100, 2)
         }
     }
+

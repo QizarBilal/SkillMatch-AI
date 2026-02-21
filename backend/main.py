@@ -14,6 +14,12 @@ from nlp_engine import clean_text, extract_skills, extract_keywords, parse_resum
 from nlp_preprocessing import preprocess_text, extract_skills_hybrid, extract_keywords_hybrid, generate_tfidf_vectors
 from auth import hash_password, verify_password, create_access_token, verify_token
 from comparison_engine import compare_profiles
+from suggestion_engine import generate_skill_suggestions, get_skill_explanation
+from admin import (
+    get_analytics_summary, get_top_missing_skills, get_top_job_roles,
+    get_skill_category_distribution, get_recommendation_distribution,
+    get_recent_analyses, validate_admin_role
+)
 from mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection
 import pymongo.errors
 import warnings
@@ -158,9 +164,11 @@ def get_submissions(user_id: int = Depends(verify_token)):
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 def preprocess_image_for_ocr(image):
+    # Convert to grayscale
     if image.mode != 'L':
         image = image.convert('L')
     
+    # Resize if too small (better OCR on larger images)
     width, height = image.size
     if width < 1500:
         scale = 1500 / width
@@ -168,19 +176,42 @@ def preprocess_image_for_ocr(image):
         new_height = int(height * scale)
         image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
     
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(2.5)
+    # Convert to numpy array for advanced preprocessing
+    import numpy as np
+    img_array = np.array(image)
     
-    enhancer = ImageEnhance.Sharpness(image)
-    image = enhancer.enhance(2.0)
-    
-    enhancer = ImageEnhance.Brightness(image)
-    image = enhancer.enhance(1.2)
-    
-    from PIL import ImageOps
-    image = ImageOps.autocontrast(image, cutoff=2)
-    
-    image = image.filter(ImageFilter.MedianFilter(size=3))
+    # Apply adaptive thresholding (better for varying lighting)
+    try:
+        import cv2
+        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        img_array = clahe.apply(img_array)
+        
+        # Denoise
+        img_array = cv2.fastNlMeansDenoising(img_array, None, 10, 7, 21)
+        
+        # Adaptive threshold
+        img_array = cv2.adaptiveThreshold(
+            img_array, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 11, 2
+        )
+        
+        image = Image.fromarray(img_array)
+    except ImportError:
+        # Fallback to PIL-only processing if OpenCV not available
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(2.5)
+        
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(2.0)
+        
+        enhancer = ImageEnhance.Brightness(image)
+        image = enhancer.enhance(1.2)
+        
+        from PIL import ImageOps
+        image = ImageOps.autocontrast(image, cutoff=2)
+        
+        image = image.filter(ImageFilter.MedianFilter(size=3))
     
     return image
 
@@ -204,15 +235,19 @@ def is_text_quality_good(text):
         return False
     
     garbled_patterns = [
-        r'[a-z]{15,}',
-        r'\b[bcdfghjklmnpqrstvwxyz]{5,}\b',
-        r'[wxy]{3,}',
+        r'[a-z]{15,}',  # Very long lowercase sequences
+        r'\b[bcdfghjklmnpqrstvwxyz]{5,}\b',  # 5+ consonants in a row
+        r'[wxy]{3,}',  # Repeated w/x/y
+        r'\b[a-z]{2,3}[wxy]{2,}[a-z]{2,3}\b',  # Words with w/x/y clusters
     ]
     
+    garbled_count = 0
     for pattern in garbled_patterns:
         matches = re.findall(pattern, text.lower())
-        if len(matches) > len(words) * 0.1:
-            return False
+        garbled_count += len(matches)
+    
+    if len(words) > 0 and garbled_count > len(words) * 0.15:  # More than 15% garbled words
+        return False
     
     common_words = ['the', 'and', 'to', 'of', 'a', 'in', 'for', 'is', 'on', 'with', 'experience', 'skills', 'education', 'work', 'at', 'by', 'from', 'as', 'about', 'have', 'has', 'had', 'was', 'were', 'been', 'be', 'are', 'am']
     common_word_count = sum(1 for word in words if word.lower() in common_words)
@@ -268,7 +303,7 @@ def read_pdf(file):
             page_text = pytesseract.image_to_string(
                 processed_img,
                 lang='eng',
-                config='--psm 1 --oem 3'
+                config='--psm 6 --oem 3 -c preserve_interword_spaces=1'
             )
             ocr_text += page_text + " "
         
@@ -277,11 +312,32 @@ def read_pdf(file):
         print(f"OCR text length: {len(ocr_text)}")
         print(f"OCR sample: {ocr_text[:200] if ocr_text else 'No OCR text'}")
         
-        if is_text_quality_good(ocr_text):
+        ocr_quality_ok = is_text_quality_good(ocr_text)
+        original_quality_ok = is_text_quality_good(text)
+        
+        # If both are poor quality, raise an error with helpful message
+        if not ocr_quality_ok and not original_quality_ok:
+            raise Exception(
+                "Unable to extract readable text from PDF. This may be due to:\n"
+                "1. Poor scan quality (try rescanning at higher resolution)\n"
+                "2. Image-based PDF without proper text layer\n"
+                "3. Unusual fonts or encoding\n"
+                "Please provide a text-based PDF or higher quality scan."
+            )
+        
+        # Return the better quality text
+        if ocr_quality_ok and not original_quality_ok:
             return ocr_text
+        elif original_quality_ok and not ocr_quality_ok:
+            return text
+        elif ocr_quality_ok and original_quality_ok:
+            # Both are good, prefer the longer one
+            return ocr_text if len(ocr_text) > len(text) else text
         elif len(ocr_text) > len(text) and len(ocr_text) > 100:
+            print("⚠️ WARNING: OCR text quality is poor but using it anyway (better than extracted text)")
             return ocr_text
         else:
+            print("⚠️ WARNING: Using extracted text despite poor quality")
             return text if text else ocr_text
     except ImportError as e:
         print(f"PyMuPDF import error: {e}")
@@ -397,6 +453,35 @@ async def analyze(
         jd_structured['required_languages'] +
         jd_structured['required_databases']
     )
+    
+    # FALLBACK: If structured fields are empty/junk but skills were extracted, use raw extracted skills
+    junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application'}
+    
+    # Clean extracted skills
+    clean_resume_skills = [s for s in resume_skills_extracted if s.lower() not in junk_terms]
+    clean_jd_skills = [s for s in jd_skills_extracted if s.lower() not in junk_terms]
+    
+    # Filter junk from aggregated skills
+    clean_all_resume_skills = [s for s in all_resume_skills if s.lower() not in junk_terms]
+    clean_all_jd_keywords = [s for s in all_jd_keywords if s.lower() not in junk_terms]
+    
+    # If structured skills are empty or only junk, use extracted skills
+    if len(clean_all_resume_skills) == 0 and len(clean_resume_skills) > 0:
+        print(f"⚠️ FALLBACK: Structured resume skills are empty/junk, using raw extracted skills")
+        resume_structured['technical_skills'] = clean_resume_skills[:15]
+        resume_structured['tools'] = []
+        resume_structured['frameworks'] = []
+        resume_structured['programming_languages'] = []
+        resume_structured['databases'] = []
+    
+    # If JD structured fields are empty or only junk, use extracted keywords
+    if len(clean_all_jd_keywords) == 0 and len(clean_jd_skills) > 0:
+        print(f"⚠️ FALLBACK: Structured JD skills are empty/junk, using raw extracted keywords")
+        jd_structured['required_skills'] = clean_jd_skills[:15]
+        jd_structured['required_frameworks'] = []
+        jd_structured['required_tools'] = []
+        jd_structured['required_languages'] = []
+        jd_structured['required_databases'] = []
 
     resume_profile_obj = {
         'candidate_name': resume_structured['candidate_name'],
@@ -431,6 +516,22 @@ async def analyze(
     }
 
     comparison_result = compare_profiles(resume_profile_obj, job_profile_obj)
+    
+    all_jd_skills = (
+        jd_structured['required_skills'] + 
+        jd_structured['required_frameworks'] + 
+        jd_structured['required_tools'] + 
+        jd_structured['required_languages'] +
+        jd_structured['required_databases']
+    )
+    
+    skill_suggestions = generate_skill_suggestions(
+        jd_skills=all_jd_skills,
+        resume_skills=all_resume_skills,
+        job_role=jd_structured['job_role'],
+        jd_text=jd_text,
+        missing_skills=comparison_result['missing_skills']
+    )
 
     try:
         resume_doc = {
@@ -458,6 +559,8 @@ async def analyze(
             'jd_id': rid,
             'comparison': comparison_result,
             'match_percentage': comparison_result['match_percentage'],
+            'suggested_skills': skill_suggestions['suggested_skills'],
+            'missing_skills_explained': skill_suggestions['missing_skills_explained'],
             'created_at': datetime.utcnow()
         }
         analysis_results_collection.insert_one(analysis_doc)
@@ -540,5 +643,45 @@ async def analyze(
         "resume_skills": all_resume_skills,
         "job_keywords": all_jd_keywords,
         "comparison": comparison_result,
+        "skill_suggestions": skill_suggestions,
         "dataset_size": 0 if 'submission_count' not in locals() else submissions_collection.count_documents({})
     }
+
+@app.get("/admin/analytics")
+def get_admin_analytics(user_id: int = Depends(verify_token)):
+    if not validate_admin_role(users_collection, user_id):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        analytics = get_analytics_summary(
+            users_collection,
+            submissions_collection,
+            analysis_results_collection
+        )
+        
+        top_missing = get_top_missing_skills(analysis_results_collection, limit=20)
+        top_roles = get_top_job_roles(submissions_collection, limit=15)
+        category_dist = get_skill_category_distribution(analysis_results_collection)
+        rec_dist = get_recommendation_distribution(analysis_results_collection)
+        recent = get_recent_analyses(analysis_results_collection, limit=10)
+        
+        return {
+            "summary": analytics,
+            "top_missing_skills": top_missing,
+            "top_job_roles": top_roles,
+            "skill_category_distribution": category_dist,
+            "recommendation_distribution": rec_dist,
+            "recent_analyses": recent
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@app.get("/admin/validate")
+def validate_admin(user_id: int = Depends(verify_token)):
+    is_admin = validate_admin_role(users_collection, user_id)
+    return {"is_admin": is_admin}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+

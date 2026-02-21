@@ -5,6 +5,7 @@ python-docx
 pytesseract
 pillow
 PyMuPDF
+opencv-python
 pandas
 scikit-learn
 python-multipart

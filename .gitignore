@@ -11,6 +11,7 @@ ENV/
 *.egg-info/
 dist/
 build/
+*.pyc
 
 # Node
 node_modules/
@@ -18,6 +19,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json
+yarn.lock
 
 # IDEs
 .vscode/
@@ -25,10 +28,14 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
 # OS
 .DS_Store
 Thumbs.db
+*.bak
 
 # Dataset
 backend/dataset_store.csv
@@ -41,10 +48,28 @@ backend/migrate_database.py
 # Environment variables
 .env
 .env.local
+.env.production
+.env.development
 
 # Logs
 *.log
+logs/
+*.log.*
 
 # Build outputs
 frontend/dist/
 frontend/build/
+
+# Uploaded files
+backend/uploads/
+backend/temp/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Deployment
+.vercel
+.netlify
