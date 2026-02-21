@@ -5,7 +5,6 @@ username = "bilalqizar"
 password = "bilalqizar"
 cluster = "techportfoliohub.s3pd6uw.mongodb.net"
 
-# Test with exact Atlas format (no authSource parameter)
 uri = f"mongodb+srv://{quote_plus(username)}:{quote_plus(password)}@{cluster}/?appName=TechPortfolioHub"
 
 print(f"Testing connection with:")
@@ -17,19 +16,16 @@ print()
 try:
     client = MongoClient(uri, serverSelectionTimeoutMS=10000)
     
-    # Test connection
     print("Attempting to connect...")
     server_info = client.server_info()
     
     print("✓ SUCCESS! Connected to MongoDB Atlas")
     print(f"  MongoDB Version: {server_info.get('version')}")
     
-    # List databases
     print(f"\nAvailable databases:")
     for db in client.list_database_names():
         print(f"  - {db}")
     
-    # Test SkillMatch database
     db = client["SkillMatch"]
     print(f"\nCollections in 'SkillMatch' database:")
     collections = db.list_collection_names()

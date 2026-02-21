@@ -10,11 +10,9 @@ MONGO_DATABASE = os.getenv("MONGO_DATABASE", "SkillMatch")
 
 MONGO_URI = f"mongodb+srv://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_CLUSTER}/?appName=TechPortfolioHub"
 
-# Initialize client without blocking on connection
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
 db = client[MONGO_DATABASE]
 
-# Test connection lazily
 def test_connection():
     try:
         client.admin.command('ping')

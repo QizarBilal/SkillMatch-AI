@@ -3,20 +3,17 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 CANONICAL_SKILL_MAP = {
-    # Core web technologies
     'html5': 'html',
     'html 5': 'html',
     'css3': 'css',
     'css 3': 'css',
     
-    # JavaScript ecosystem
     'javascript': 'javascript',
     'js': 'javascript',
     'typescript': 'typescript',
     'ts': 'typescript',
     'typescript js': 'typescript',
     
-    # React family
     'react js': 'react',
     'react.js': 'react',
     'reactjs': 'react',
@@ -27,7 +24,6 @@ CANONICAL_SKILL_MAP = {
     'gatsby': 'gatsby',
     'gatsby js': 'gatsby',
     
-    # Vue ecosystem
     'vue js': 'vue',
     'vue.js': 'vue',
     'vuejs': 'vue',
@@ -35,23 +31,19 @@ CANONICAL_SKILL_MAP = {
     'nuxt js': 'nuxt.js',
     'nuxt.js': 'nuxt.js',
     
-    # Angular
     'angular': 'angular',
     'angular js': 'angular',
     'angularjs': 'angular',
     
-    # Node.js
     'node js': 'node.js',
     'node.js': 'node.js',
     'nodejs': 'node.js',
     'node': 'node.js',
     
-    # Express
     'express js': 'express',
     'expressjs': 'express',
     'express.js': 'express',
     
-    # CSS frameworks
     'tailwindcss': 'tailwind',
     'tailwind css': 'tailwind',
     'bootstrap': 'bootstrap',
@@ -61,13 +53,11 @@ CANONICAL_SKILL_MAP = {
     'scss': 'sass',
     'less': 'less',
     
-    # Version control
     'git hub': 'git',
     'github': 'git',
     'gitlab': 'git',
     'bitbucket': 'git',
     
-    # Databases
     'mongo db': 'mongodb',
     'mongo': 'mongodb',
     'postgresql': 'postgresql',
@@ -76,20 +66,17 @@ CANONICAL_SKILL_MAP = {
     'sql': 'sql',
     'nosql': 'nosql',
     
-    # APIs
     'rest api': 'rest',
     'restful': 'rest',
     'restful api': 'rest',
     'graphql': 'graphql',
     
-    # DevOps
     'docker': 'docker',
     'kubernetes': 'kubernetes',
     'k8s': 'kubernetes',
     'ci/cd': 'ci/cd',
     'cicd': 'ci/cd',
     
-    # Cloud platforms
     'aws': 'aws',
     'amazon web services': 'aws',
     'azure': 'azure',
@@ -98,25 +85,21 @@ CANONICAL_SKILL_MAP = {
     'google cloud': 'gcp',
     'google cloud platform': 'gcp',
     
-    # Design tools
     'figma': 'figma',
     'figma design': 'figma',
     'sketch': 'sketch',
     'adobe xd': 'adobe xd',
     'xd': 'adobe xd',
     
-    # Build tools
     'webpack': 'webpack',
     'vite': 'vite',
     'parcel': 'parcel',
     'rollup': 'rollup',
     
-    # State management
     'redux': 'redux',
     'mobx': 'mobx',
     'vuex': 'vuex',
     
-    # Backend frameworks
     'django': 'django',
     'flask': 'flask',
     'fastapi': 'fastapi',
@@ -125,7 +108,6 @@ CANONICAL_SKILL_MAP = {
     'spring': 'spring boot',
     'laravel': 'laravel',
     
-    # Programming languages
     'python': 'python',
     'java': 'java',
     'c++': 'c++',
@@ -141,7 +123,6 @@ CANONICAL_SKILL_MAP = {
     'swift': 'swift',
     'kotlin': 'kotlin',
     
-    # Libraries
     'jquery': 'jquery',
     'axios': 'axios',
     'lodash': 'lodash'
@@ -149,7 +130,7 @@ CANONICAL_SKILL_MAP = {
 
 SKILL_TAXONOMY = {
     'languages': {
-        'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'go', 
+        'python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'go',
         'rust', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'r', 'c', 
         'html', 'css', 'sql'
     },
@@ -174,19 +155,14 @@ SKILL_TAXONOMY = {
         'tailwind', 'sass', 'axios', 'lodash'
     },
     'concepts': {
-        # API patterns (excluded from scoring)
         'rest', 'graphql', 'microservices', 'oauth', 'websocket',
-        # Methodologies (excluded from scoring)
         'agile', 'scrum', 'tdd', 'devops', 'ci/cd',
-        # Design patterns (excluded from scoring)
         'oop', 'mvc', 'mvvm', 'solid',
-        # Soft skills & descriptive terms (excluded from scoring)
         'responsive design', 'responsive', 'ui/ux', 'ux', 'ui',
         'performance optimization', 'optimization', 'performance',
         'problem solving', 'problem-solving', 'communication',
         'teamwork', 'collaboration', 'leadership',
         'analytical', 'critical thinking', 'creativity',
-        # Generic descriptive terms (excluded from scoring)
         'frontend', 'backend', 'fullstack', 'full-stack',
         'web development', 'mobile development',
         'software development', 'software engineering',
@@ -248,18 +224,15 @@ def classify_skills_by_taxonomy(skills):
         'other': []
     }
     
-    # Filter out junk terms that should never be considered technical skills
     junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 
                   'software', 'web', 'application', 'system', 'technology'}
     
     for skill in skills:
-        # Skip junk terms
         if skill.lower() in junk_terms:
             continue
             
         canonical = canonicalize_skill(skill)
         if canonical:
-            # Double-check canonical form isn't junk
             if canonical.lower() in junk_terms:
                 continue
                 
@@ -304,13 +277,7 @@ def calculate_weighted_score(matched, required, category_weight):
     return match_ratio * category_weight
 
 def compare_profiles(resume_profile, job_profile):
-    """
-    UNIFIED SKILL SET MATCHING - Compares single canonical skill sets, not category-wise.
-    Uses pure skill intersection/difference without weighted category scoring.
-    """
     
-    # STEP 1: Build Canonical Resume Core Skill Set
-    # Collect all resume skills from various fields
     resume_skills_raw = []
     resume_skills_raw.extend(resume_profile.get('technical_skills', []))
     resume_skills_raw.extend(resume_profile.get('programming_languages', []))
@@ -318,19 +285,15 @@ def compare_profiles(resume_profile, job_profile):
     resume_skills_raw.extend(resume_profile.get('tools', []))
     resume_skills_raw.extend(resume_profile.get('databases', []))
     
-    # Canonicalize and classify
     resume_skills_canonical = normalize_and_canonicalize_skills(resume_skills_raw)
     resume_classified = classify_skills_by_taxonomy(resume_skills_canonical)
     
-    # Build unified resume core skill set (languages ∪ frameworks ∪ tools ∪ databases)
     resume_core_skills = set()
     resume_core_skills.update(resume_classified['languages'])
     resume_core_skills.update(resume_classified['frameworks'])
     resume_core_skills.update(resume_classified['tools'])
     resume_core_skills.update(resume_classified['databases'])
     
-    # STEP 2: Build Canonical JD Required Skill Set
-    # Collect all JD required skills
     jd_skills_raw = []
     jd_skills_raw.extend(job_profile.get('required_skills', []))
     jd_skills_raw.extend(job_profile.get('required_languages', []))
@@ -338,28 +301,22 @@ def compare_profiles(resume_profile, job_profile):
     jd_skills_raw.extend(job_profile.get('required_tools', []))
     jd_skills_raw.extend(job_profile.get('required_databases', []))
     
-    # Canonicalize and classify
     jd_skills_canonical = normalize_and_canonicalize_skills(jd_skills_raw)
     jd_classified = classify_skills_by_taxonomy(jd_skills_canonical)
     
-    # Build unified JD core required set (exclude non-technical concepts)
     jd_core_required = set()
     jd_core_required.update(jd_classified['languages'])
     jd_core_required.update(jd_classified['frameworks'])
     jd_core_required.update(jd_classified['tools'])
     jd_core_required.update(jd_classified['databases'])
-    # NOTE: Concepts are automatically excluded (they're not added to this set)
     
-    # STEP 3: Unified Matching Logic (Simple Set Operations)
     matched = resume_core_skills.intersection(jd_core_required)
     missing = jd_core_required - resume_core_skills
-    additional = resume_core_skills - jd_core_required  # Bonus skills
+    additional = resume_core_skills - jd_core_required
     
-    # STEP 4: Pure Skill Match Score (No weighted categories)
     skill_match_ratio = len(matched) / len(jd_core_required) if len(jd_core_required) > 0 else 0.0
     final_score = round(skill_match_ratio * 100, 2)
     
-    # Category breakdowns (for display only, not used in scoring)
     matched_by_category = {}
     missing_by_category = {}
     for category in ['languages', 'frameworks', 'tools', 'databases']:
@@ -368,13 +325,11 @@ def compare_profiles(resume_profile, job_profile):
         matched_by_category[category] = list(resume_cat.intersection(jd_cat))
         missing_by_category[category] = list(jd_cat - resume_cat)
     
-    # Category-specific ratios (for detailed display only)
     language_ratio = len(matched_by_category['languages']) / len(jd_classified['languages']) if jd_classified['languages'] else 1.0
     framework_ratio = len(matched_by_category['frameworks']) / len(jd_classified['frameworks']) if jd_classified['frameworks'] else 1.0
     tool_ratio = len(matched_by_category['tools']) / len(jd_classified['tools']) if jd_classified['tools'] else 1.0
     database_ratio = len(matched_by_category['databases']) / len(jd_classified['databases']) if jd_classified['databases'] else 1.0
     
-    # STEP 5: Experience Handling (Does NOT affect skill score)
     resume_experience = resume_profile.get('experience_years_estimated', 0)
     jd_experience_str = job_profile.get('required_experience_years', '')
     
@@ -399,7 +354,6 @@ def compare_profiles(resume_profile, job_profile):
     if experience_gap:
         experience_gap_warning = f"Candidate has {resume_experience} years but role requires {jd_experience}+ years (gap: {experience_gap_years} years)"
     
-    # Education check (informational only)
     resume_degrees = set(normalize_list(resume_profile.get('education_degrees', [])))
     jd_education = set(normalize_list(job_profile.get('required_education', [])))
     
@@ -410,8 +364,6 @@ def compare_profiles(resume_profile, job_profile):
         elif 'master' in ' '.join(jd_education).lower():
             education_match = any('master' in deg.lower() or 'phd' in deg.lower() for deg in resume_degrees)
     
-    # STEP 6: Recommendation Thresholds
-    # ≥80% → Strong Fit | 60-79% → Good Skill Match | 40-59% → Partial Match | <40% → Weak Match
     if final_score >= 80:
         if experience_gap:
             recommendation = "Strong Fit (Experience Gap)"
@@ -439,7 +391,6 @@ def compare_profiles(resume_profile, job_profile):
         recommendation = "Weak Match"
         decision_summary = f"Insufficient match ({round(final_score)}%). Missing most core technical requirements."
     
-    # STEP 7: Build simplified output (no large category-wise missing lists)
     top_strengths = []
     if len(matched) > 0:
         matched_list = sorted(list(matched))
@@ -482,14 +433,11 @@ def compare_profiles(resume_profile, job_profile):
         'additional_skills': sorted(list(additional))[:10]
     }
     
-    # STEP 8: Simplified Output Structure
     return {
-        # Core unified skill matching
         'matched_skills': sorted(list(matched)),
         'missing_skills': sorted(list(missing)),
         'additional_skills': sorted(list(additional)),
         
-        # Category-level breakdowns (for display only)
         'matched_languages': matched_by_category['languages'],
         'missing_languages': missing_by_category['languages'],
         'matched_frameworks': matched_by_category['frameworks'],
@@ -499,7 +447,6 @@ def compare_profiles(resume_profile, job_profile):
         'matched_databases': matched_by_category['databases'],
         'missing_databases': missing_by_category['databases'],
         
-        # Experience and education
         'experience_match': not experience_gap,
         'experience_gap_warning': experience_gap_warning,
         'experience_gap': experience_gap,
@@ -507,7 +454,6 @@ def compare_profiles(resume_profile, job_profile):
         'resume_experience_years': resume_experience,
         'required_experience_years': jd_experience,
         
-        # Scoring
         'match_percentage': final_score,
         'skill_match_ratio': round(skill_match_ratio * 100, 2),
         'language_ratio': round(language_ratio * 100, 2),
@@ -515,11 +461,9 @@ def compare_profiles(resume_profile, job_profile):
         'tool_ratio': round(tool_ratio * 100, 2),
         'database_ratio': round(database_ratio * 100, 2),
         
-        # Recommendation
         'recommendation': recommendation,
         'explanation': explanation,
         
-        # Scoring details
         'weighted_scores': {
             'skill_match_score': round(skill_match_ratio * 100, 2),
             'matched_count': len(matched),

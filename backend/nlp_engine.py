@@ -13,17 +13,12 @@ except:
 
 base_stopwords = set("""
 a about above after again against all am an and any are as at be because been before being below between both but by could did do does doing down during each few for from further had has have having he her here hers herself him himself his how i if in into is it its itself just me more most my myself no nor not of off on once only or other our ours ourselves out over own same she should so some such than that the their theirs them themselves then there these they this those through to too under until up very was we were what when where which while who whom why will with you your yours yourself yourselves
-""".split())
-
-domain_stopwords = set("""
-candidate role responsibility responsibilities required must should will would include includes including looking seeking ideal position work team environment company organization business strong excellent good great ability experience years year level senior junior prefer preferred bonus nice work working company join organization offer summary culture benefits salary competitive package grew growth opportunity opportunities hiring hire apply application
-""".split())
 
 stopwords = base_stopwords | domain_stopwords
 
 typed_technical_ontology = {
     "programming_language": {
-        "python", "java", "javascript", "typescript", "c++", "c#", "csharp", "go", "golang", 
+        "python", "java", "javascript", "typescript", "c++", "c#", "csharp", "go", "golang",
         "rust", "ruby", "php", "swift", "kotlin", "scala", "r", "perl", "matlab", "sql"
     },
     "framework": {
@@ -249,12 +244,10 @@ def detect_sections(text):
 def get_section_priority(text_fragment, section_map):
     text_lower = text_fragment.lower()
     
-    # Check priority sections FIRST (skills, technical skills, etc.)
     for section_name in priority_sections:
         if section_name in text_lower:
             return 2.0
     
-    # Then check reject sections (but priority sections already took precedence)
     for section_name in strict_reject_sections:
         if section_name in text_lower:
             return -1.0
@@ -1693,15 +1686,12 @@ def parse_resume_structured(text):
     
     classified = classify_by_ontology_type(all_skills)
     
-    # FALLBACK: If classification is too strict and returns empty/junk arrays,
-    # populate with extracted skills directly to ensure matching works
     junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application', 
                   'system', 'technology', 'technical', 'digital', 'online', 'virtual', 'remote', 'hybrid',
                   'go', 'excel', 'work', 'job', 'role', 'team', 'company', 'business', 'project',
                   'artificial', 'intelligence', 'chrome', 'edge', 'firefox', 'safari', 'studio', 'visual',
                   'code', 'devtools', 'tools', 'platforms', 'notebook', 'development'}
     
-    # Filter out junk terms from classified results
     for category in ['technical_skills', 'languages', 'frameworks', 'tools', 'databases']:
         classified[category] = [skill for skill in classified[category] if skill.lower() not in junk_terms]
     
@@ -1713,11 +1703,9 @@ def parse_resume_structured(text):
         len(classified['databases'])
     )
     
-    # Filter extracted skills to remove junk before fallback
     clean_extracted_skills = [s for s in all_skills if s.lower() not in junk_terms]
     
     if total_classified == 0 and len(clean_extracted_skills) > 0:
-        # Classification filtered out everything - use raw extracted skills as fallback
         classified['technical_skills'] = clean_extracted_skills[:15]
     
     candidate_soft_skills = []
@@ -1783,15 +1771,12 @@ def parse_jd_structured(text):
     
     classified = classify_jd_keywords(all_keywords, text)
     
-    # FALLBACK: If classification is too strict and returns empty/junk arrays,
-    # populate with extracted keywords directly to ensure matching works
     junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application',
                   'system', 'technology', 'technical', 'digital', 'online', 'virtual', 'remote', 'hybrid',
                   'go', 'excel', 'work', 'job', 'role', 'team', 'company', 'business', 'project',
                   'artificial', 'intelligence', 'chrome', 'edge', 'firefox', 'safari', 'studio', 'visual',
                   'code', 'devtools', 'tools', 'platforms', 'notebook', 'development'}
     
-    # Filter out junk terms from classified results
     for category in ['technical_skills', 'languages', 'frameworks', 'tools', 'databases']:
         classified[category] = [skill for skill in classified[category] if skill.lower() not in junk_terms]
     
@@ -1803,11 +1788,9 @@ def parse_jd_structured(text):
         len(classified['databases'])
     )
     
-    # Filter extracted keywords to remove junk before fallback
     clean_extracted_keywords = [k for k in all_keywords if k.lower() not in junk_terms]
     
     if total_classified == 0 and len(clean_extracted_keywords) > 0:
-        # Classification filtered out everything - use raw keywords as fallback
         classified['technical_skills'] = clean_extracted_keywords[:15]
     
     experience_years = []

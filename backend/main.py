@@ -27,14 +27,11 @@ import os
 import platform
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
-# Set tesseract path based on environment
 if platform.system() == 'Windows':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-# On Linux/Docker, tesseract is in PATH by default
 
 app = FastAPI()
 
-# Test MongoDB connection on startup (non-blocking)
 @app.on_event("startup")
 async def startup_event():
     test_connection()
@@ -169,11 +166,9 @@ def get_submissions(user_id: int = Depends(verify_token)):
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 def preprocess_image_for_ocr(image):
-    # Convert to grayscale
     if image.mode != 'L':
         image = image.convert('L')
     
-    # Resize if too small (better OCR on larger images)
     width, height = image.size
     if width < 1500:
         scale = 1500 / width
@@ -181,21 +176,16 @@ def preprocess_image_for_ocr(image):
         new_height = int(height * scale)
         image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
     
-    # Convert to numpy array for advanced preprocessing
     import numpy as np
     img_array = np.array(image)
     
-    # Apply adaptive thresholding (better for varying lighting)
     try:
         import cv2
-        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         img_array = clahe.apply(img_array)
         
-        # Denoise
         img_array = cv2.fastNlMeansDenoising(img_array, None, 10, 7, 21)
         
-        # Adaptive threshold
         img_array = cv2.adaptiveThreshold(
             img_array, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
             cv2.THRESH_BINARY, 11, 2
@@ -203,7 +193,6 @@ def preprocess_image_for_ocr(image):
         
         image = Image.fromarray(img_array)
     except ImportError:
-        # Fallback to PIL-only processing if OpenCV not available
         enhancer = ImageEnhance.Contrast(image)
         image = enhancer.enhance(2.5)
         
@@ -240,10 +229,10 @@ def is_text_quality_good(text):
         return False
     
     garbled_patterns = [
-        r'[a-z]{15,}',  # Very long lowercase sequences
-        r'\b[bcdfghjklmnpqrstvwxyz]{5,}\b',  # 5+ consonants in a row
-        r'[wxy]{3,}',  # Repeated w/x/y
-        r'\b[a-z]{2,3}[wxy]{2,}[a-z]{2,3}\b',  # Words with w/x/y clusters
+        r'[a-z]{15,}',
+        r'\b[bcdfghjklmnpqrstvwxyz]{5,}\b',
+        r'[wxy]{3,}',
+        r'\b[a-z]{2,3}[wxy]{2,}[a-z]{2,3}\b',
     ]
     
     garbled_count = 0
@@ -251,7 +240,7 @@ def is_text_quality_good(text):
         matches = re.findall(pattern, text.lower())
         garbled_count += len(matches)
     
-    if len(words) > 0 and garbled_count > len(words) * 0.15:  # More than 15% garbled words
+    if len(words) > 0 and garbled_count > len(words) * 0.15:
         return False
     
     common_words = ['the', 'and', 'to', 'of', 'a', 'in', 'for', 'is', 'on', 'with', 'experience', 'skills', 'education', 'work', 'at', 'by', 'from', 'as', 'about', 'have', 'has', 'had', 'was', 'were', 'been', 'be', 'are', 'am']
@@ -320,7 +309,6 @@ def read_pdf(file):
         ocr_quality_ok = is_text_quality_good(ocr_text)
         original_quality_ok = is_text_quality_good(text)
         
-        # If both are poor quality, raise an error with helpful message
         if not ocr_quality_ok and not original_quality_ok:
             raise Exception(
                 "Unable to extract readable text from PDF. This may be due to:\n"
@@ -330,13 +318,11 @@ def read_pdf(file):
                 "Please provide a text-based PDF or higher quality scan."
             )
         
-        # Return the better quality text
         if ocr_quality_ok and not original_quality_ok:
             return ocr_text
         elif original_quality_ok and not ocr_quality_ok:
             return text
         elif ocr_quality_ok and original_quality_ok:
-            # Both are good, prefer the longer one
             return ocr_text if len(ocr_text) > len(text) else text
         elif len(ocr_text) > len(text) and len(ocr_text) > 100:
             print("⚠️ WARNING: OCR text quality is poor but using it anyway (better than extracted text)")
@@ -459,18 +445,14 @@ async def analyze(
         jd_structured['required_databases']
     )
     
-    # FALLBACK: If structured fields are empty/junk but skills were extracted, use raw extracted skills
     junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application'}
     
-    # Clean extracted skills
     clean_resume_skills = [s for s in resume_skills_extracted if s.lower() not in junk_terms]
     clean_jd_skills = [s for s in jd_skills_extracted if s.lower() not in junk_terms]
     
-    # Filter junk from aggregated skills
     clean_all_resume_skills = [s for s in all_resume_skills if s.lower() not in junk_terms]
     clean_all_jd_keywords = [s for s in all_jd_keywords if s.lower() not in junk_terms]
     
-    # If structured skills are empty or only junk, use extracted skills
     if len(clean_all_resume_skills) == 0 and len(clean_resume_skills) > 0:
         print(f"⚠️ FALLBACK: Structured resume skills are empty/junk, using raw extracted skills")
         resume_structured['technical_skills'] = clean_resume_skills[:15]
@@ -479,7 +461,6 @@ async def analyze(
         resume_structured['programming_languages'] = []
         resume_structured['databases'] = []
     
-    # If JD structured fields are empty or only junk, use extracted keywords
     if len(clean_all_jd_keywords) == 0 and len(clean_jd_skills) > 0:
         print(f"⚠️ FALLBACK: Structured JD skills are empty/junk, using raw extracted keywords")
         jd_structured['required_skills'] = clean_jd_skills[:15]
@@ -488,7 +469,15 @@ async def analyze(
         jd_structured['required_languages'] = []
         jd_structured['required_databases'] = []
 
-    resume_profile_obj = {
+    resume_profile_obj = { 
+        jd_structured['required_frameworks'] + 
+        jd_structured['required_tools'] + 
+        jd_structured['required_languages'] +
+        jd_structured['required_databases']
+    )
+    
+    all_jd_keywords = (
+        jd_structured['required_skills'] +
         'candidate_name': resume_structured['candidate_name'],
         'email': resume_structured['email'],
         'phone': resume_structured['phone'],

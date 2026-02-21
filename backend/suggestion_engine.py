@@ -47,14 +47,12 @@ SKILL_CO_OCCURRENCE_MAP = {
     'ui/ux': ['figma', 'sketch', 'adobe xd', 'user research', 'wireframing', 'prototyping', 'usability testing'],
     'design systems': ['figma', 'sketch', 'storybook', 'design tokens', 'component libraries'],
     
-    # Technical Writing & Documentation
     'markdown': ['git', 'github', 'documentation', 'readme', 'technical writing'],
     'confluence': ['jira', 'documentation', 'knowledge base', 'technical writing', 'wiki'],
     'swagger': ['openapi', 'api documentation', 'rest api', 'postman', 'api design'],
     'technical writing': ['markdown', 'confluence', 'api documentation', 'user guides', 'swagger', 'gitbook'],
     'documentation': ['markdown', 'confluence', 'swagger', 'docusaurus', 'sphinx', 'readthedocs'],
     
-    # QA & Testing (expanded)
     'selenium': ['webdriver', 'test automation', 'java', 'python', 'testng', 'junit'],
     'cypress': ['javascript', 'test automation', 'e2e testing', 'mocha', 'chai'],
     'junit': ['java', 'maven', 'testng', 'mockito', 'unit testing'],
@@ -63,63 +61,53 @@ SKILL_CO_OCCURRENCE_MAP = {
     'postman': ['rest api', 'api testing', 'swagger', 'newman', 'api automation'],
     'cucumber': ['bdd', 'gherkin', 'selenium', 'test automation', 'java'],
     
-    # Database Administration
     'oracle': ['pl/sql', 'database administration', 'backup recovery', 'performance tuning', 'data guard'],
     'postgresql': ['sql', 'database design', 'indexing', 'query optimization', 'pgadmin'],
     'database administration': ['sql', 'backup recovery', 'performance tuning', 'indexing', 'monitoring'],
     'redis': ['caching', 'nosql', 'key-value store', 'pub/sub', 'data structures'],
     
-    # Security & Cybersecurity
     'cybersecurity': ['penetration testing', 'firewalls', 'encryption', 'vulnerability assessment', 'siem'],
     'penetration testing': ['kali linux', 'metasploit', 'burp suite', 'nmap', 'wireshark'],
     'owasp': ['web security', 'penetration testing', 'vulnerability assessment', 'secure coding'],
     'firewalls': ['network security', 'iptables', 'cisco', 'packet filtering', 'vpn'],
     
-    # System Administration
     'linux': ['bash', 'shell scripting', 'ubuntu', 'centos', 'system administration', 'ssh'],
     'bash': ['linux', 'shell scripting', 'automation', 'sed', 'awk', 'grep'],
     'powershell': ['windows server', 'automation', 'active directory', 'scripting', 'azure'],
     'active directory': ['windows server', 'ldap', 'powershell', 'group policy', 'authentication'],
     'windows server': ['active directory', 'powershell', 'iis', 'hyper-v', 'system administration'],
     
-    # Game Development
     'unity': ['c#', 'game development', '3d modeling', 'animation', 'physics'],
     'unreal engine': ['c++', 'blueprints', 'game development', '3d modeling', 'rendering'],
     'c#': ['unity', '.net', 'visual studio', 'asp.net', 'entity framework'],
     'c++': ['unreal engine', 'embedded systems', 'performance optimization', 'data structures'],
     
-    # Embedded Systems
     'embedded systems': ['c', 'c++', 'microcontrollers', 'rtos', 'arduino', 'raspberry pi'],
     'arduino': ['c++', 'embedded systems', 'iot', 'sensors', 'prototyping'],
     'rtos': ['embedded systems', 'c', 'real-time programming', 'multithreading', 'scheduling'],
     
-    # Blockchain
     'blockchain': ['solidity', 'ethereum', 'smart contracts', 'web3', 'cryptocurrency'],
     'solidity': ['ethereum', 'smart contracts', 'web3', 'truffle', 'hardhat'],
     'ethereum': ['solidity', 'smart contracts', 'web3', 'metamask', 'blockchain'],
     'web3': ['ethereum', 'solidity', 'blockchain', 'metamask', 'ipfs'],
     
-    # Data Engineering
     'apache spark': ['scala', 'pyspark', 'hadoop', 'big data', 'data processing'],
     'airflow': ['python', 'etl', 'data pipelines', 'workflow orchestration', 'scheduling'],
     'kafka': ['streaming', 'message broker', 'distributed systems', 'real-time data', 'zookeeper'],
     'etl': ['sql', 'data warehousing', 'data pipelines', 'airflow', 'data integration'],
     'snowflake': ['sql', 'data warehousing', 'cloud', 'etl', 'data analytics'],
     
-    # SRE & Monitoring
     'prometheus': ['grafana', 'monitoring', 'alerting', 'kubernetes', 'metrics'],
     'grafana': ['prometheus', 'monitoring', 'dashboards', 'visualization', 'alerting'],
     'elasticsearch': ['kibana', 'logstash', 'elk stack', 'search', 'logging'],
     'kibana': ['elasticsearch', 'logstash', 'visualization', 'dashboards', 'elk stack'],
     'incident management': ['pagerduty', 'monitoring', 'alerting', 'oncall', 'sre'],
     
-    # HR & Recruitment
     'ats': ['recruitment', 'applicant tracking', 'hiring', 'hr software', 'talent acquisition'],
     'linkedin recruiter': ['recruitment', 'talent sourcing', 'candidate search', 'hiring'],
     'workday': ['hris', 'hr management', 'payroll', 'talent management', 'benefits'],
     'bamboohr': ['hris', 'hr management', 'onboarding', 'time tracking', 'performance management'],
     
-    # Digital Marketing
     'seo': ['google analytics', 'keyword research', 'content marketing', 'link building', 'semrush'],
     'google analytics': ['seo', 'google ads', 'data analysis', 'conversion tracking', 'web analytics'],
     'google ads': ['ppc', 'sem', 'google analytics', 'keyword research', 'digital marketing'],
@@ -128,31 +116,26 @@ SKILL_CO_OCCURRENCE_MAP = {
     'hubspot': ['crm', 'marketing automation', 'email marketing', 'content management', 'analytics'],
     'content marketing': ['seo', 'copywriting', 'content strategy', 'blogging', 'social media'],
     
-    # Sales & CRM
     'salesforce': ['crm', 'sales automation', 'pipeline management', 'reporting', 'apex'],
     'crm': ['salesforce', 'hubspot', 'customer management', 'pipeline management', 'sales automation'],
     'pipedrive': ['crm', 'pipeline management', 'sales automation', 'lead management'],
     'cold calling': ['sales', 'lead generation', 'prospecting', 'communication', 'crm'],
     
-    # Customer Support
     'zendesk': ['customer support', 'ticketing', 'help desk', 'customer service', 'live chat'],
     'freshdesk': ['customer support', 'ticketing', 'help desk', 'knowledge base', 'automation'],
     'intercom': ['customer support', 'live chat', 'customer messaging', 'help desk', 'automation'],
     'customer success': ['crm', 'customer support', 'account management', 'retention', 'analytics'],
     
-    # Finance & Accounting
     'quickbooks': ['accounting', 'bookkeeping', 'invoicing', 'financial reporting', 'payroll'],
     'sap': ['erp', 'financial management', 'supply chain', 'business intelligence', 'reporting'],
     'financial modeling': ['excel', 'accounting', 'budgeting', 'forecasting', 'valuation'],
     'gaap': ['accounting', 'financial reporting', 'compliance', 'auditing'],
     
-    # Business Analysis
     'business analysis': ['requirements gathering', 'user stories', 'process mapping', 'sql', 'data analysis'],
     'requirements gathering': ['business analysis', 'user stories', 'stakeholder management', 'documentation'],
     'process mapping': ['business analysis', 'bpmn', 'visio', 'process improvement', 'documentation'],
     'visio': ['process mapping', 'flowcharts', 'diagrams', 'uml', 'documentation'],
     
-    # Product Management
     'product management': ['roadmapping', 'user stories', 'jira', 'product strategy', 'metrics'],
     'roadmapping': ['product management', 'prioritization', 'product strategy', 'stakeholder management'],
     'product strategy': ['product management', 'market research', 'competitive analysis', 'roadmapping'],
@@ -175,7 +158,6 @@ DOMAIN_SKILL_MAP = {
     'operations': ['asana', 'jira', 'trello', 'excel', 'google sheets', 'slack', 'process optimization', 'sop documentation'],
     'project management': ['asana', 'jira', 'trello', 'gantt charts', 'risk management', 'budget management', 'stakeholder communication'],
     
-    # Tech domains - expanded
     'technical writing': ['markdown', 'confluence', 'swagger', 'gitbook', 'technical documentation', 'api documentation'],
     'qa testing': ['selenium', 'cypress', 'junit', 'pytest', 'test automation', 'postman', 'cucumber', 'testng'],
     'database administration': ['sql', 'oracle', 'postgresql', 'mysql', 'backup recovery', 'performance tuning', 'indexing'],
@@ -187,7 +169,6 @@ DOMAIN_SKILL_MAP = {
     'data engineering': ['apache spark', 'airflow', 'kafka', 'etl', 'snowflake', 'data pipelines', 'sql'],
     'sre': ['prometheus', 'grafana', 'kubernetes', 'monitoring', 'incident management', 'alerting', 'oncall'],
     
-    # Non-tech domains
     'hr recruitment': ['ats', 'linkedin recruiter', 'workday', 'bamboohr', 'recruitment', 'onboarding', 'talent acquisition'],
     'digital marketing': ['seo', 'google analytics', 'google ads', 'facebook ads', 'content marketing', 'mailchimp', 'hubspot'],
     'sales': ['salesforce', 'crm', 'pipedrive', 'cold calling', 'pipeline management', 'lead generation'],
@@ -262,7 +243,6 @@ SKILL_EXPLANATION_MAP = {
     'process optimization': 'Systematic approach to improving efficiency and effectiveness of workflows',
     'git': 'Version control system for tracking code changes and collaboration',
     
-    # Technical Writing & Documentation
     'markdown': 'Lightweight markup language for formatting text and creating documentation',
     'swagger': 'API documentation framework for designing, building, and documenting RESTful APIs',
     'openapi': 'API specification standard for describing REST APIs in machine-readable format',
@@ -272,7 +252,6 @@ SKILL_EXPLANATION_MAP = {
     'docusaurus': 'Documentation website generator built with React for easy maintenance',
     'sphinx': 'Documentation generator for Python projects using reStructuredText',
     
-    # QA & Testing
     'selenium': 'Browser automation framework for testing web applications across browsers',
     'cypress': 'Modern end-to-end testing framework for web applications with JavaScript',
     'junit': 'Unit testing framework for Java applications',
@@ -283,7 +262,6 @@ SKILL_EXPLANATION_MAP = {
     'bdd': 'Behavior-Driven Development approach focusing on collaboration and user behavior',
     'mockito': 'Java mocking framework for unit testing and test-driven development',
     
-    # Database Administration
     'oracle': 'Enterprise relational database management system with advanced features',
     'database administration': 'Managing, maintaining, and optimizing database systems for performance',
     'backup recovery': 'Processes for backing up data and recovering from failures or disasters',
@@ -293,7 +271,6 @@ SKILL_EXPLANATION_MAP = {
     'redis': 'In-memory data structure store used as cache, database, and message broker',
     'nosql': 'Non-relational database approach for flexible, scalable data storage',
     
-    # Security & Cybersecurity
     'cybersecurity': 'Practice of protecting systems, networks, and data from digital attacks',
     'penetration testing': 'Ethical hacking to identify security vulnerabilities before attackers do',
     'owasp': 'Open Web Application Security Project providing security best practices',
@@ -305,7 +282,6 @@ SKILL_EXPLANATION_MAP = {
     'burp suite': 'Web application security testing toolkit for finding vulnerabilities',
     'siem': 'Security Information and Event Management for real-time security monitoring',
     
-    # System Administration
     'linux': 'Open-source Unix-like operating system widely used in servers and development',
     'bash': 'Unix shell and command language for system administration and automation',
     'shell scripting': 'Writing scripts to automate system administration tasks',
@@ -315,7 +291,6 @@ SKILL_EXPLANATION_MAP = {
     'ssh': 'Secure Shell protocol for secure remote access to systems',
     'system administration': 'Managing and maintaining computer systems, servers, and networks',
     
-    # Game Development
     'unity': 'Cross-platform game engine for creating 2D and 3D games',
     'c#': 'Modern object-oriented programming language developed by Microsoft',
     'unreal engine': 'Advanced game engine for creating high-fidelity gaming experiences',
@@ -323,7 +298,6 @@ SKILL_EXPLANATION_MAP = {
     '3d modeling': 'Creating three-dimensional digital representations of objects',
     'blueprints': "Unreal Engine's visual scripting system for game logic without coding",
     
-    # Embedded Systems
     'embedded systems': 'Computer systems integrated into devices to perform dedicated functions',
     'microcontrollers': 'Small computers on integrated circuits for embedded applications',
     'arduino': 'Open-source electronics platform for building digital devices and interactive objects',
@@ -331,7 +305,6 @@ SKILL_EXPLANATION_MAP = {
     'iot': 'Internet of Things - network of physical devices connected to the internet',
     'raspberry pi': 'Small single-board computer for learning programming and building projects',
     
-    # Blockchain
     'blockchain': 'Distributed ledger technology for secure, transparent transactions',
     'solidity': 'Programming language for writing smart contracts on Ethereum blockchain',
     'ethereum': 'Decentralized blockchain platform for smart contracts and applications',
@@ -340,7 +313,6 @@ SKILL_EXPLANATION_MAP = {
     'cryptocurrency': 'Digital currency using cryptography for secure transactions',
     'metamask': 'Cryptocurrency wallet for interacting with Ethereum blockchain',
     
-    # Data Engineering
     'apache spark': 'Unified analytics engine for large-scale data processing',
     'airflow': 'Platform for programmatically authoring, scheduling, and monitoring workflows',
     'kafka': 'Distributed streaming platform for building real-time data pipelines',
@@ -351,7 +323,6 @@ SKILL_EXPLANATION_MAP = {
     'hadoop': 'Framework for distributed storage and processing of big data',
     'big data': 'Extremely large datasets requiring specialized tools and techniques',
     
-    # SRE & Monitoring
     'prometheus': 'Open-source monitoring system with time-series database',
     'grafana': 'Analytics and monitoring platform for visualizing metrics',
     'monitoring': 'Continuous observation of systems to ensure performance and availability',
@@ -365,7 +336,6 @@ SKILL_EXPLANATION_MAP = {
     'logstash': 'Data processing pipeline for ingesting and transforming logs',
     'elk stack': 'Elasticsearch, Logstash, Kibana stack for logging and monitoring',
     
-    # HR & Recruitment
     'ats': 'Applicant Tracking System for managing recruitment and hiring processes',
     'linkedin recruiter': 'Tool for sourcing and contacting potential candidates on LinkedIn',
     'workday': 'Cloud-based human capital management and financial management software',
@@ -375,7 +345,6 @@ SKILL_EXPLANATION_MAP = {
     'onboarding': 'Process of integrating new employees into the organization',
     'hris': 'Human Resource Information System for managing HR data and processes',
     
-    # Digital Marketing
     'seo': 'Search Engine Optimization for improving website visibility in search results',
     'google analytics': 'Web analytics platform for tracking and reporting website traffic',
     'google ads': 'Online advertising platform for creating and managing paid ads',
@@ -390,7 +359,6 @@ SKILL_EXPLANATION_MAP = {
     'keyword research': 'Identifying search terms people use to find information online',
     'email marketing': 'Using email to promote products and build relationships with customers',
     
-    # Sales & CRM
     'salesforce': 'Leading cloud-based CRM platform for sales, service, and marketing',
     'crm': 'Customer Relationship Management system for managing customer interactions',
     'pipeline management': 'Tracking and managing sales opportunities through stages',
@@ -400,7 +368,6 @@ SKILL_EXPLANATION_MAP = {
     'sales automation': 'Using software to automate repetitive sales tasks',
     'apex': 'Salesforce proprietary programming language for custom development',
     
-    # Customer Support
     'zendesk': 'Customer service platform for support ticket management',
     'freshdesk': 'Cloud-based customer support software for helpdesk management',
     'intercom': 'Customer messaging platform for support, engagement, and marketing',
@@ -410,7 +377,6 @@ SKILL_EXPLANATION_MAP = {
     'customer success': 'Ensuring customers achieve desired outcomes with products/services',
     'live chat': 'Real-time messaging for customer support on websites',
     
-    # Finance & Accounting
     'quickbooks': 'Accounting software for small and medium-sized businesses',
     'sap': 'Enterprise Resource Planning software for business operations',
     'financial modeling': 'Creating representations of company financial performance',
@@ -422,7 +388,6 @@ SKILL_EXPLANATION_MAP = {
     'forecasting': 'Predicting future financial outcomes based on data',
     'erp': 'Enterprise Resource Planning for integrated business management',
     
-    # Business Analysis
     'business analysis': 'Identifying business needs and determining solutions',
     'requirements gathering': 'Collecting stakeholder needs and project requirements',
     'user stories': 'Short descriptions of features from user perspective',
@@ -431,7 +396,6 @@ SKILL_EXPLANATION_MAP = {
     'stakeholder management': 'Engaging and managing relationships with project stakeholders',
     'bpmn': 'Business Process Model and Notation for process documentation',
     
-    # Product Management
     'product management': 'Guiding product development from conception to launch',
     'roadmapping': 'Creating strategic plan for product features and timeline',
     'product strategy': 'Long-term plan for product development and market positioning',
@@ -442,7 +406,6 @@ SKILL_EXPLANATION_MAP = {
     'metrics': 'Quantitative measures for tracking performance and success',
     'market research': 'Gathering information about target markets and customers',
     
-    # Content Writing
     'wordpress': 'Content management system for creating websites and blogs',
     'cms': 'Content Management System for creating and managing digital content',
     'content strategy': 'Planning creation, delivery, and governance of content',
@@ -459,42 +422,34 @@ def suggest_skills_by_co_occurrence(jd_skills: List[str], resume_skills: List[st
     jd_normalized = set(normalize_skill(s) for s in jd_skills)
     resume_normalized = set(normalize_skill(s) for s in resume_skills)
     
-    # Define irrelevant skills by domain to filter out
     domain_exclusions = {
-        # Development domains - exclude data science/ML
         'web development': ['numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'matplotlib', 'seaborn', 'jupyter'],
         'frontend': ['numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'matplotlib', 'seaborn', 'jupyter', 'django', 'flask', 'spring boot'],
         'backend': ['numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'matplotlib', 'seaborn', 'jupyter', 'react', 'angular', 'vue', 'figma', 'sketch'],
         'fullstack': ['numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'matplotlib', 'seaborn', 'jupyter'],
         'mobile': ['django', 'flask', 'spring boot', 'react', 'angular', 'vue', 'pandas', 'numpy', 'scikit-learn'],
         
-        # Design domains - exclude development frameworks
         'ui/ux': ['django', 'flask', 'spring boot', 'pandas', 'numpy', 'webpack', 'babel', 'kubernetes', 'docker', 'terraform'],
         'design': ['django', 'flask', 'spring boot', 'pandas', 'numpy', 'webpack', 'babel', 'kubernetes', 'docker'],
         
-        # Data/ML domains - exclude web frameworks
         'data science': ['react', 'angular', 'vue', 'django', 'flask', 'spring boot', 'node.js', 'express', 'figma', 'sketch'],
         'machine learning': ['react', 'angular', 'vue', 'django', 'flask', 'spring boot', 'node.js', 'express', 'figma', 'sketch'],
         'data engineering': ['react', 'angular', 'vue', 'figma', 'sketch', 'adobe xd', 'prototyping'],
         
-        # Infrastructure domains - exclude web/design
         'devops': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'scikit-learn', 'tensorflow'],
         'sre': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'scikit-learn'],
         'cloud': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'scikit-learn'],
         'system administration': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'tensorflow', 'django', 'flask'],
         
-        # Technical specialist domains
         'qa testing': ['pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch', 'figma', 'sketch', 'adobe xd'],
         'database administration': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'tensorflow', 'pytorch'],
         'cybersecurity': ['react', 'angular', 'vue', 'figma', 'sketch', 'pandas', 'numpy', 'tensorflow', 'django', 'flask'],
         'technical writing': ['react', 'angular', 'vue', 'pandas', 'numpy', 'scikit-learn', 'tensorflow', 'kubernetes', 'docker'],
         
-        # Specialized development
         'game development': ['react', 'angular', 'vue', 'django', 'flask', 'pandas', 'numpy', 'scikit-learn', 'kubernetes'],
         'embedded systems': ['react', 'angular', 'vue', 'django', 'flask', 'pandas', 'numpy', 'kubernetes', 'figma'],
         'blockchain': ['pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch', 'figma', 'sketch'],
         
-        # Business/Operations domains - exclude ALL technical development
         'operations': ['django', 'flask', 'spring boot', 'react', 'angular', 'vue', 'node.js', 'numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'docker', 'kubernetes', 'webpack', 'babel', 'c++', 'java', 'python'],
         'project management': ['django', 'flask', 'spring boot', 'react', 'angular', 'vue', 'node.js', 'numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'docker', 'kubernetes', 'webpack', 'babel', 'c++', 'java'],
         'product management': ['django', 'flask', 'spring boot', 'numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch', 'docker', 'kubernetes', 'c++'],
@@ -507,8 +462,6 @@ def suggest_skills_by_co_occurrence(jd_skills: List[str], resume_skills: List[st
         'content writing': ['django', 'flask', 'react', 'angular', 'vue', 'numpy', 'pandas', 'scikit-learn', 'tensorflow', 'docker', 'kubernetes', 'c++', 'java', 'python'],
     }
     
-    # For generic roles (no detected domain), only suggest broadly applicable tools
-    # Exclude domain-specific frameworks/libraries
     general_allowed_skills = ['git', 'docker', 'kubernetes', 'ci/cd', 'agile', 'unit testing', 
                                'rest api', 'sql', 'postgresql', 'mysql', 'mongodb', 'redis',
                                'aws', 'azure', 'gcp', 'linux', 'bash']
@@ -517,8 +470,6 @@ def suggest_skills_by_co_occurrence(jd_skills: List[str], resume_skills: List[st
     if detected_domain and detected_domain in domain_exclusions:
         excluded_skills = set(normalize_skill(s) for s in domain_exclusions[detected_domain])
     elif not detected_domain:
-        # No domain detected - be conservative, only suggest general tools
-        # Exclude web frameworks, ML libraries, and specialized tools
         excluded_skills = set(normalize_skill(s) for s in [
             'django', 'flask', 'fastapi', 'spring boot', 'laravel',
             'react', 'angular', 'vue', 'next.js', 'svelte',
@@ -535,12 +486,10 @@ def suggest_skills_by_co_occurrence(jd_skills: List[str], resume_skills: List[st
             related_skills = SKILL_CO_OCCURRENCE_MAP[jd_skill]
             for related in related_skills:
                 related_norm = normalize_skill(related)
-                # Skip if already in resume, already suggested, or excluded for this domain
                 if related_norm not in resume_normalized and related_norm not in seen and related_norm not in excluded_skills:
                     seen.add(related_norm)
                     explanation = SKILL_EXPLANATION_MAP.get(related_norm, f"Commonly used with {jd_skill}")
                     
-                    # Only mark as high priority if domain-specific context OR universally important
                     is_universal = related_norm in ['docker', 'git', 'ci/cd', 'unit testing', 'agile']
                     is_high = is_universal or (detected_domain and related_norm in ['rest api', 'sql', 'mongodb', 'postgresql'])
                     
@@ -560,22 +509,17 @@ def suggest_skills_by_domain(job_role: str, jd_text: str, resume_skills: List[st
     
     detected_domain = None
     
-    # Step 1: Check for DEVELOPER/ENGINEER roles FIRST (these mention design but aren't design roles)
-    # Step 1: Check for OPERATIONS/BUSINESS roles first (highest priority for non-technical)
     operations_roles = ['operations coordinator', 'operations manager', 'project coordinator', 
                         'administrative', 'office manager', 'business operations']
     if any(role in job_role_lower for role in operations_roles):
         detected_domain = 'operations'
     
-    # Step 2: Check for PROJECT MANAGEMENT roles
     elif 'project manager' in job_role_lower or 'program manager' in job_role_lower or 'pmo' in job_role_lower:
         detected_domain = 'project management'
     
-    # Step 3: Check for PRODUCT MANAGEMENT roles
     elif 'product manager' in job_role_lower or 'product owner' in job_role_lower:
         detected_domain = 'product management'
     
-    # Step 4: Check for NON-TECHNICAL roles
     elif 'recruiter' in job_role_lower or 'talent acquisition' in job_role_lower or 'hr' in job_role_lower:
         detected_domain = 'hr recruitment'
     elif any(role in job_role_lower for role in ['marketing', 'seo specialist', 'digital marketer', 'content marketer']):
@@ -589,13 +533,11 @@ def suggest_skills_by_domain(job_role: str, jd_text: str, resume_skills: List[st
     elif 'business analyst' in job_role_lower or 'ba' in job_role_lower:
         detected_domain = 'business analysis'
     elif any(role in job_role_lower for role in ['content writer', 'copywriter', 'technical writer', 'writer']):
-        # Check if it's technical writer
         if 'technical' in job_role_lower or 'api' in text_lower or 'documentation' in text_lower:
             detected_domain = 'technical writing'
         else:
             detected_domain = 'content writing'
     
-    # Step 5: Check for TECHNICAL SPECIALIST roles
     elif any(role in job_role_lower for role in ['qa', 'quality assurance', 'test engineer', 'sdet', 'automation tester']):
         detected_domain = 'qa testing'
     elif any(role in job_role_lower for role in ['dba', 'database administrator', 'database engineer']):
@@ -627,7 +569,6 @@ def suggest_skills_by_domain(job_role: str, jd_text: str, resume_skills: List[st
     elif any(role in job_role_lower for role in ['mobile developer', 'ios developer', 'android developer']):
         detected_domain = 'mobile'
     
-    # Step 6: Check for DEVELOPMENT roles
     elif 'web developer' in job_role_lower or ('web development' in job_role_lower and 'html' in text_lower and 'css' in text_lower):
         detected_domain = 'web development'
     elif 'frontend' in job_role_lower or 'front end' in job_role_lower:
@@ -637,18 +578,15 @@ def suggest_skills_by_domain(job_role: str, jd_text: str, resume_skills: List[st
     elif 'fullstack' in job_role_lower or 'full stack' in job_role_lower:
         detected_domain = 'fullstack'
     
-    # Step 7: Check for DESIGN roles
     elif any(role in job_role_lower for role in ['ui ux designer', 'ux ui designer', 'product designer', 
                                                    'interaction designer', 'visual designer', 'ui designer', 
                                                    'ux designer', 'graphic designer']):
-        # Check if it's genuinely a design role with design tools mentioned
         design_tool_count = sum(1 for tool in ['figma', 'sketch', 'adobe xd', 'wireframe', 'prototype'] if tool in text_lower)
         if design_tool_count >= 1:
             detected_domain = 'ui/ux'
         else:
             detected_domain = 'design'
     
-    # Step 8: Fall back to keyword matching for other domains
     else:
         for domain, keywords in DOMAIN_SKILL_MAP.items():
             excluded_from_fallback = ['ui/ux', 'design', 'web development', 'operations', 'project management',
@@ -658,7 +596,7 @@ def suggest_skills_by_domain(job_role: str, jd_text: str, resume_skills: List[st
                                       'system administration', 'sre', 'devops', 'data engineering', 'game development',
                                       'embedded systems', 'blockchain', 'cloud', 'mobile']
             if domain in excluded_from_fallback:
-                continue  # Already checked these
+                continue
             if any(normalize_skill(keyword) in text_lower for keyword in keywords[:3]):
                 detected_domain = domain
                 break
@@ -694,12 +632,10 @@ def generate_skill_suggestions(
     missing_skills: List[str] = None
 ) -> Dict[str, any]:
     
-    # First detect domain for context-aware recommendations
     text_lower = normalize_skill(job_role + ' ' + jd_text)
     job_role_lower = normalize_skill(job_role)
     detected_domain = None
     
-    # Domain detection - prioritize non-technical roles first (must match suggest_skills_by_domain logic)
     operations_roles = ['operations coordinator', 'operations manager', 'project coordinator', 
                         'administrative', 'office manager', 'business operations']
     if any(role in job_role_lower for role in operations_roles):
@@ -769,11 +705,10 @@ def generate_skill_suggestions(
     co_occurrence_suggestions = suggest_skills_by_co_occurrence(jd_skills, resume_skills, detected_domain)
     domain_suggestions = suggest_skills_by_domain(job_role, jd_text, resume_skills)
     
-    # Prioritize missing skills from JD as HIGH priority
     missing_skill_suggestions = []
     if missing_skills:
         resume_normalized = set(normalize_skill(s) for s in resume_skills)
-        for skill in missing_skills[:8]:  # Top 8 missing skills
+        for skill in missing_skills[:8]:
             skill_norm = normalize_skill(skill)
             if skill_norm not in resume_normalized:
                 explanation = get_skill_explanation(skill)
