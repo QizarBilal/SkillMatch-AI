@@ -10,17 +10,17 @@ import json
 import io
 import re
 from datetime import datetime
-from nlp_engine import clean_text, extract_skills, extract_keywords, parse_resume_structured, parse_jd_structured
-from nlp_preprocessing import preprocess_text, extract_skills_hybrid, extract_keywords_hybrid, generate_tfidf_vectors
-from auth import hash_password, verify_password, create_access_token, verify_token
-from comparison_engine import compare_profiles
-from suggestion_engine import generate_skill_suggestions, get_skill_explanation
-from admin import (
+from .nlp_engine import clean_text, extract_skills, extract_keywords, parse_resume_structured, parse_jd_structured
+from .nlp_preprocessing import preprocess_text, extract_skills_hybrid, extract_keywords_hybrid, generate_tfidf_vectors
+from .auth import hash_password, verify_password, create_access_token, verify_token
+from .comparison_engine import compare_profiles
+from .suggestion_engine import generate_skill_suggestions, get_skill_explanation
+from .admin import (
     get_analytics_summary, get_top_missing_skills, get_top_job_roles,
     get_skill_category_distribution, get_recommendation_distribution,
     get_recent_analyses, validate_admin_role
 )
-from mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection
+from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection
 import pymongo.errors
 import warnings
 import os
