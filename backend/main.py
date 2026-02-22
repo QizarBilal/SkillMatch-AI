@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 import pdfplumber
 import docx
@@ -670,4 +672,13 @@ def validate_admin(user_id: int = Depends(verify_token)):
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    file_path = f"frontend/dist/{full_path}"
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse("frontend/dist/index.html")
 
