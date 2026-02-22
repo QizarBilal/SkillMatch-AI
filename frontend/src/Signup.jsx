@@ -1,8 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import API_BASE_URL from './config'
 
+const useWindowSize = () => {
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    isMobile: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        isMobile: window.innerWidth < 768,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return windowSize;
+};
+
 export default function Signup() {
+  const { isMobile } = useWindowSize();
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -83,24 +107,24 @@ export default function Signup() {
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      padding: '20px'
+      padding: isMobile ? '16px' : '20px'
     },
     authCard: {
       background: 'rgba(15, 23, 42, 0.6)',
       backdropFilter: 'blur(20px)',
       border: '1px solid rgba(99, 102, 241, 0.2)',
-      borderRadius: '24px',
-      padding: '48px 40px',
+      borderRadius: isMobile ? '16px' : '24px',
+      padding: isMobile ? '32px 24px' : '48px 40px',
       width: '100%',
-      maxWidth: '440px',
+      maxWidth: isMobile ? '100%' : '440px',
       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4), 0 0 80px rgba(99, 102, 241, 0.1)',
     },
     logoSection: {
       textAlign: 'center',
-      marginBottom: '40px'
+      marginBottom: isMobile ? '28px' : '40px'
     },
     logo: {
-      fontSize: '32px',
+      fontSize: isMobile ? '24px' : '32px',
       fontWeight: '700',
       background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
       WebkitBackgroundClip: 'text',
@@ -109,23 +133,23 @@ export default function Signup() {
       letterSpacing: '-0.5px'
     },
     subtitle: {
-      fontSize: '14px',
+      fontSize: isMobile ? '13px' : '14px',
       color: 'rgba(226, 232, 240, 0.6)',
       fontWeight: '400'
     },
     form: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px'
+      gap: isMobile ? '20px' : '24px'
     },
     inputGroup: {
       position: 'relative'
     },
     label: {
       position: 'absolute',
-      left: '16px',
-      top: '16px',
-      fontSize: '14px',
+      left: isMobile ? '14px' : '16px',
+      top: isMobile ? '14px' : '16px',
+      fontSize: isMobile ? '13px' : '14px',
       color: 'rgba(226, 232, 240, 0.5)',
       pointerEvents: 'none',
       transition: 'all 0.2s ease',
@@ -133,46 +157,51 @@ export default function Signup() {
     },
     input: {
       width: '100%',
-      padding: '16px',
+      padding: isMobile ? '14px' : '16px',
       background: 'rgba(30, 41, 59, 0.5)',
       border: '1px solid rgba(148, 163, 184, 0.2)',
-      borderRadius: '12px',
+      borderRadius: isMobile ? '10px' : '12px',
       color: '#e2e8f0',
-      fontSize: '15px',
+      fontSize: isMobile ? '16px' : '15px',
       outline: 'none',
       transition: 'all 0.3s ease',
       boxSizing: 'border-box'
     },
     inputPassword: {
       width: '100%',
-      padding: '16px',
-      paddingRight: '50px',
+      padding: isMobile ? '14px' : '16px',
+      paddingRight: isMobile ? '44px' : '50px',
       background: 'rgba(30, 41, 59, 0.5)',
       border: '1px solid rgba(148, 163, 184, 0.2)',
-      borderRadius: '12px',
+      borderRadius: isMobile ? '10px' : '12px',
       color: '#e2e8f0',
-      fontSize: '15px',
+      fontSize: isMobile ? '16px' : '15px',
       outline: 'none',
       transition: 'all 0.3s ease',
       boxSizing: 'border-box'
     },
     togglePassword: {
       position: 'absolute',
-      right: '16px',
-      top: '16px',
+      right: isMobile ? '14px' : '16px',
+      top: isMobile ? '14px' : '16px',
       background: 'none',
       border: 'none',
       color: 'rgba(226, 232, 240, 0.5)',
       cursor: 'pointer',
-      fontSize: '14px',
+      fontSize: isMobile ? '13px' : '14px',
       padding: 0,
-      transition: 'color 0.2s'
+      transition: 'color 0.2s',
+      minWidth: '44px',
+      minHeight: '44px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     strengthBar: {
-      height: '4px',
+      height: isMobile ? '3px' : '4px',
       background: 'rgba(148, 163, 184, 0.2)',
       borderRadius: '2px',
-      marginTop: '8px',
+      marginTop: isMobile ? '6px' : '8px',
       overflow: 'hidden'
     },
     strengthFill: {
@@ -183,13 +212,13 @@ export default function Signup() {
       borderRadius: '2px'
     },
     strengthLabel: {
-      fontSize: '12px',
+      fontSize: isMobile ? '11px' : '12px',
       color: passwordStrength.color,
       marginTop: '4px',
       fontWeight: '500'
     },
     mismatchWarning: {
-      fontSize: '12px',
+      fontSize: isMobile ? '11px' : '12px',
       color: '#fca5a5',
       marginTop: '4px'
     },
@@ -197,34 +226,35 @@ export default function Signup() {
       background: 'rgba(239, 68, 68, 0.1)',
       border: '1px solid rgba(239, 68, 68, 0.3)',
       borderRadius: '8px',
-      padding: '12px 16px',
+      padding: isMobile ? '10px 14px' : '12px 16px',
       color: '#fca5a5',
-      fontSize: '14px',
+      fontSize: isMobile ? '13px' : '14px',
       animation: 'shake 0.4s ease'
     },
     button: {
-      padding: '16px',
+      padding: isMobile ? '14px' : '16px',
       background: loading ? 'rgba(99, 102, 241, 0.5)' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
       border: 'none',
-      borderRadius: '12px',
+      borderRadius: isMobile ? '10px' : '12px',
       color: '#ffffff',
-      fontSize: '16px',
+      fontSize: isMobile ? '15px' : '16px',
       fontWeight: '600',
       cursor: loading ? 'not-allowed' : 'pointer',
       transition: 'all 0.3s ease',
       boxShadow: loading ? 'none' : '0 4px 20px rgba(99, 102, 241, 0.4)',
       transform: loading ? 'scale(1)' : 'scale(1)',
-      marginTop: '8px'
+      marginTop: isMobile ? '4px' : '8px',
+      minHeight: '44px',
     },
     footer: {
       textAlign: 'center',
-      marginTop: '32px',
-      paddingTop: '24px',
+      marginTop: isMobile ? '24px' : '32px',
+      paddingTop: isMobile ? '20px' : '24px',
       borderTop: '1px solid rgba(148, 163, 184, 0.1)'
     },
     footerText: {
       color: 'rgba(226, 232, 240, 0.6)',
-      fontSize: '14px'
+      fontSize: isMobile ? '13px' : '14px'
     },
     link: {
       color: '#6366f1',
