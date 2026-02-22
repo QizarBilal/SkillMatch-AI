@@ -10,7 +10,7 @@ MONGO_DATABASE = os.getenv("MONGO_DATABASE", "SkillMatch")
 
 MONGO_URI = f"mongodb+srv://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_CLUSTER}/?appName=TechPortfolioHub"
 
-client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
 db = client[MONGO_DATABASE]
 
 def test_connection():
@@ -25,6 +25,14 @@ def test_connection():
         print("2. Database user exists with correct credentials")
         print("3. Your IP address is whitelisted (or use 0.0.0.0/0 for testing)")
         print("4. Network access is properly configured")
+        return False
+
+def quick_health_check():
+    """Quick health check for Render - returns immediately if connection fails"""
+    try:
+        client.admin.command('ping', maxTimeMS=2000)
+        return True
+    except:
         return False
 
 users_collection = db["users"]

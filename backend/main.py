@@ -22,11 +22,12 @@ from .admin import (
     get_skill_category_distribution, get_recommendation_distribution,
     get_recent_analyses, validate_admin_role
 )
-from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection
+from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection, quick_health_check
 import pymongo.errors
 import warnings
 import os
 import platform
+import asyncio
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
 if platform.system() == 'Windows':
@@ -34,9 +35,26 @@ if platform.system() == 'Windows':
 
 app = FastAPI()
 
+# Global state for application readiness
+app_ready = False
+
 @app.on_event("startup")
 async def startup_event():
-    test_connection()
+    global app_ready
+    # Run DB test asynchronously without blocking startup
+    asyncio.create_task(async_db_test())
+
+async def async_db_test():
+    global app_ready
+    try:
+        await asyncio.sleep(0.1)  # Brief delay to allow app to start serving
+        loop = asyncio.get_event_loop()
+        # Run blocking DB test in thread pool
+        result = await loop.run_in_executor(None, test_connection)
+        app_ready = result
+    except Exception as e:
+        print(f"Startup DB test failed: {e}")
+        app_ready = False
 
 app.add_middleware(
     CORSMiddleware,
@@ -671,7 +689,14 @@ def validate_admin(user_id: int = Depends(verify_token)):
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    """Fast health check endpoint for Render"""
+    db_healthy = quick_health_check()
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": "connected" if db_healthy else "disconnected",
+        "app_ready": app_ready
+    }
 
 app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
 
