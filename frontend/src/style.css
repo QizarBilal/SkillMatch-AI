@@ -1,5 +1,11 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
@@ -8,12 +14,16 @@ body {
   background: #0f172a;
   color: white;
   overflow-x: hidden;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .wrap {
   max-width: 900px;
   margin: auto;
   padding: 40px 20px;
+  width: 100%;
 }
 
 .header {
@@ -28,10 +38,12 @@ body {
   border-radius: 14px;
   margin-bottom: 20px;
   box-shadow: 0 0 0 1px #1e293b;
+  width: 100%;
 }
 
 .block {
   margin-bottom: 16px;
+  width: 100%;
 }
 
 .label {
@@ -40,16 +52,29 @@ body {
   margin-bottom: 6px;
 }
 
-textarea {
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="file"],
+textarea,
+select {
   width: 100%;
-  height: 140px;
+  max-width: 100%;
   border-radius: 8px;
   border: none;
   padding: 10px;
   box-sizing: border-box;
+  font-size: 16px;
 }
 
-.btn {
+textarea {
+  height: 140px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.btn,
+button {
   background: #2563eb;
   color: white;
   border: none;
@@ -57,6 +82,23 @@ textarea {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 14px;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
 }
 
 .chips span {
@@ -64,15 +106,26 @@ textarea {
   background: #1e293b;
   padding: 6px 10px;
   border-radius: 20px;
-  margin: 4px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .meta {
   margin-top: 10px;
   opacity: 0.7;
+  font-size: 14px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 @media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+
   .wrap {
     padding: 20px 16px;
   }
@@ -87,22 +140,35 @@ textarea {
 
   textarea {
     height: 120px;
-    font-size: 14px;
+    font-size: 16px;
   }
 
-  .btn {
+  .btn,
+  button {
     padding: 10px 16px;
     font-size: 14px;
+    width: 100%;
   }
 
   .chips span {
     font-size: 12px;
     padding: 5px 8px;
-    margin: 3px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px;
   }
 }
 
 @media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
   .wrap {
     padding: 16px 12px;
   }
@@ -117,12 +183,18 @@ textarea {
 
   textarea {
     height: 100px;
-    font-size: 13px;
+    font-size: 16px;
   }
 
-  .btn {
+  .btn,
+  button {
     width: 100%;
     padding: 12px;
     font-size: 14px;
+  }
+
+  .chips span {
+    font-size: 11px;
+    padding: 4px 7px;
   }
 }
