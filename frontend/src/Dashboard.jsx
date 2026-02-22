@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import API_BASE_URL from './config'
 
 const styles = {
   app: {
@@ -868,7 +869,7 @@ export default function Dashboard() {
     if (!token) return
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/admin/validate', {
+      const response = await fetch(`${API_BASE_URL}/admin/validate`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -1060,7 +1061,7 @@ export default function Dashboard() {
     }
 
     try {
-      const r = await fetch("http://127.0.0.1:8000/analyze", {
+      const r = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
         headers: {
           'Authorization': `Bearer ${token}`

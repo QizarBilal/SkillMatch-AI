@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import API_BASE_URL from './config'
 
 export default function Admin() {
   const [analytics, setAnalytics] = useState(null)
@@ -20,7 +21,7 @@ export default function Admin() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/admin/validate', {
+      const response = await fetch(`${API_BASE_URL}/admin/validate`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -46,7 +47,7 @@ export default function Admin() {
   const fetchAnalytics = async () => {
     const token = localStorage.getItem('token')
     try {
-      const response = await fetch('http://127.0.0.1:8000/admin/analytics', {
+      const response = await fetch(`${API_BASE_URL}/admin/analytics`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import API_BASE_URL from './config'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -17,7 +18,7 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
