@@ -2,35 +2,52 @@ import re
 import unicodedata
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-try:
-    import spacy
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except:
-        nlp = None
-except:
-    nlp = None
 
-try:
-    import nltk
-    try:
-        from nltk.corpus import stopwords as nltk_stopwords
-        nltk_stop_set = set(nltk_stopwords.words('english'))
-    except:
+# Lazy loader for spaCy model
+_spacy_model = None
+def get_spacy_model():
+    global _spacy_model
+    if _spacy_model is None:
+        import spacy
         try:
-            nltk.download('stopwords', quiet=True)
+            _spacy_model = spacy.load("en_core_web_sm")
+        except Exception:
+            _spacy_model = None
+    return _spacy_model
+
+# Lazy loader for NLTK stopwords
+_nltk_stop_set = None
+def get_nltk_stop_set():
+    global _nltk_stop_set
+    if _nltk_stop_set is None:
+        try:
+            import nltk
             from nltk.corpus import stopwords as nltk_stopwords
-            nltk_stop_set = set(nltk_stopwords.words('english'))
-        except:
-            nltk_stop_set = set()
-except:
-    nltk_stop_set = set()
+            _nltk_stop_set = set(nltk_stopwords.words('english'))
+        except Exception:
+            try:
+                import nltk
+                nltk.download('stopwords', quiet=True)
+                from nltk.corpus import stopwords as nltk_stopwords
+                _nltk_stop_set = set(nltk_stopwords.words('english'))
+            except Exception:
+                _nltk_stop_set = set()
+    return _nltk_stop_set
 
-spacy_stop_set = set()
-if nlp:
-    spacy_stop_set = nlp.Defaults.stop_words
+def get_spacy_stop_set():
+    nlp = get_spacy_model()
+    return nlp.Defaults.stop_words if nlp else set()
 
-combined_stopwords = nltk_stop_set | spacy_stop_set
+def get_combined_stopwords():
+    return get_nltk_stop_set() | get_spacy_stop_set()
+
+# Lazy loader for TF-IDF vectorizer
+_tfidf_vectorizer = None
+def get_tfidf_vectorizer(max_features=100, ngram_range=(1, 4), min_df=1):
+    global _tfidf_vectorizer
+    if _tfidf_vectorizer is None:
+        _tfidf_vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, min_df=min_df)
+    return _tfidf_vectorizer
 
 python_skills = {
     "python", "java", "javascript", "typescript", "c++", "c#", "csharp", "go", "golang",

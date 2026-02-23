@@ -23,6 +23,24 @@ from .admin import (
     get_recent_analyses, validate_admin_role
 )
 from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection, quick_health_check
+
+# Update collection usage to lazy getter functions
+import sys
+def users_collection():
+    from .mongodb import users_collection as _uc
+    return _uc()
+def submissions_collection():
+    from .mongodb import submissions_collection as _sc
+    return _sc()
+def resumes_collection():
+    from .mongodb import resumes_collection as _rc
+    return _rc()
+def job_descriptions_collection():
+    from .mongodb import job_descriptions_collection as _jc
+    return _jc()
+def analysis_results_collection():
+    from .mongodb import analysis_results_collection as _ac
+    return _ac()
 import pymongo.errors
 import warnings
 import os
@@ -33,10 +51,16 @@ warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 if platform.system() == 'Windows':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+
 app = FastAPI()
 
 # Global state for application readiness
 app_ready = False
+
+# Lightweight health endpoint at root
+@app.get("/")
+def root_health():
+    return {"status": "ok"}
 
 @app.on_event("startup")
 async def startup_event():
