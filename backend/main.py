@@ -398,6 +398,12 @@ def read_image(file):
     text = pytesseract.image_to_string(img, config='--psm 6 --oem 3')
     return text
 
+
+import gc
+
+# Global runtime cache for NLP/ML objects
+_nlp_cache = {}
+
 @app.post("/analyze")
 async def analyze(
     resume: UploadFile, 
@@ -405,50 +411,109 @@ async def analyze(
     jd_file: UploadFile = None,
     user_id: int = Depends(verify_token)
 ):
+    # Stage 1: Text Extraction
+    def extract_text(file, ext):
+        if ext == "pdf":
+            from backend.main import read_pdf
+            return read_pdf(file)
+        elif ext == "docx":
+            from backend.main import read_docx
+            return read_docx(file)
+        else:
+            from backend.main import read_image
+            return read_image(file)
+
     ext = resume.filename.split(".")[-1].lower()
+    raw = extract_text(resume.file, ext)
+    del ext
+    gc.collect()
 
-    if ext == "pdf":
-        raw = read_pdf(resume.file)
-    elif ext == "docx":
-        raw = read_docx(resume.file)
-    else:
-        raw = read_image(resume.file)
+    # Stage 2: Preprocessing
+    if "clean_text" not in _nlp_cache:
+        from backend.nlp_engine import clean_text
+        _nlp_cache["clean_text"] = clean_text
+    cleaned_resume = _nlp_cache["clean_text"](raw)
+    del _nlp_cache["clean_text"]
+    gc.collect()
 
-    cleaned_resume = clean_text(raw)
-    resume_structured = parse_resume_structured(raw)
+    # Stage 3: Structured Parsing
+    if "parse_resume_structured" not in _nlp_cache:
+        from backend.nlp_engine import parse_resume_structured
+        _nlp_cache["parse_resume_structured"] = parse_resume_structured
+    resume_structured = _nlp_cache["parse_resume_structured"](raw)
+    del _nlp_cache["parse_resume_structured"]
+    gc.collect()
 
+    # Stage 4: JD Extraction
     if jd_file:
         jd_ext = jd_file.filename.split(".")[-1].lower()
-        if jd_ext == "pdf":
-            jd_text = read_pdf(jd_file.file)
-        elif jd_ext == "docx":
-            jd_text = read_docx(jd_file.file)
-        elif jd_ext == "txt":
-            jd_text = read_txt(jd_file.file)
-        else:
-            jd_text = read_image(jd_file.file)
+        jd_text = extract_text(jd_file.file, jd_ext)
+        del jd_ext
     elif job_description:
         jd_text = job_description
     else:
         raise HTTPException(status_code=400, detail="Either job_description text or jd_file must be provided")
+    gc.collect()
 
-    cleaned_jd = clean_text(jd_text)
-    jd_structured = parse_jd_structured(jd_text)
+    # Stage 5: JD Preprocessing
+    if "clean_text" not in _nlp_cache:
+        from backend.nlp_engine import clean_text
+        _nlp_cache["clean_text"] = clean_text
+    cleaned_jd = _nlp_cache["clean_text"](jd_text)
+    del _nlp_cache["clean_text"]
+    gc.collect()
 
-    resume_preprocessed = preprocess_text(raw)
-    jd_preprocessed = preprocess_text(jd_text)
-    
-    resume_skills_extracted = extract_skills_hybrid(raw)
-    jd_skills_extracted = extract_keywords_hybrid(jd_text)
-    
-    tfidf_data = generate_tfidf_vectors(raw, jd_text)
+    # Stage 6: JD Structured Parsing
+    if "parse_jd_structured" not in _nlp_cache:
+        from backend.nlp_engine import parse_jd_structured
+        _nlp_cache["parse_jd_structured"] = parse_jd_structured
+    jd_structured = _nlp_cache["parse_jd_structured"](jd_text)
+    del _nlp_cache["parse_jd_structured"]
+    gc.collect()
+
+    # Stage 7: Preprocessing tokens
+    if "preprocess_text" not in _nlp_cache:
+        from backend.nlp_preprocessing import preprocess_text
+        _nlp_cache["preprocess_text"] = preprocess_text
+    resume_preprocessed = _nlp_cache["preprocess_text"](raw)
+    jd_preprocessed = _nlp_cache["preprocess_text"](jd_text)
+    del _nlp_cache["preprocess_text"]
+    gc.collect()
+
+    # Stage 8: Skill Extraction
+    if "extract_skills_hybrid" not in _nlp_cache:
+        from backend.nlp_preprocessing import extract_skills_hybrid
+        _nlp_cache["extract_skills_hybrid"] = extract_skills_hybrid
+    resume_skills_extracted = _nlp_cache["extract_skills_hybrid"](raw)
+    del _nlp_cache["extract_skills_hybrid"]
+    gc.collect()
+
+    if "extract_keywords_hybrid" not in _nlp_cache:
+        from backend.nlp_preprocessing import extract_keywords_hybrid
+        _nlp_cache["extract_keywords_hybrid"] = extract_keywords_hybrid
+    jd_skills_extracted = _nlp_cache["extract_keywords_hybrid"](jd_text)
+    del _nlp_cache["extract_keywords_hybrid"]
+    gc.collect()
+
+    # Stage 9: TF-IDF Vectorization (memory safe)
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    vectorizer = TfidfVectorizer(max_features=100, ngram_range=(1, 4), min_df=1)
+    tfidf_matrix = vectorizer.fit_transform([raw, jd_text])
+    feature_names = vectorizer.get_feature_names_out()
+    tfidf_data = {
+        'resume_tfidf_vector': tfidf_matrix.toarray()[0],
+        'jd_tfidf_vector': tfidf_matrix.toarray()[1],
+        'feature_names': feature_names
+    }
+    del vectorizer, tfidf_matrix, feature_names
+    gc.collect()
 
     rid = str(uuid.uuid4())[:8]
 
+    # Stage 10: DB Submission
     try:
         submission_count = submissions_collection.count_documents({})
         submission_id = submission_count + 1
-        
         submission_doc = {
             "submission_id": submission_id,
             "user_id": user_id,
@@ -465,14 +530,11 @@ async def analyze(
             "created_at": datetime.utcnow()
         }
         submissions_collection.insert_one(submission_doc)
-    except pymongo.errors.OperationFailure:
-        raise HTTPException(
-            status_code=503,
-            detail="Database authentication failed. Please check MongoDB Atlas configuration: ensure user exists, password is correct, and IP is whitelisted."
-        )
-    except pymongo.errors.PyMongoError as e:
+    except Exception as e:
         print(f"MongoDB insertion warning: {str(e)}")
+    gc.collect()
 
+    # Stage 11: Skill/Keyword Cleaning
     all_resume_skills = (
         resume_structured['technical_skills'] + 
         resume_structured['tools'] + 
@@ -480,7 +542,6 @@ async def analyze(
         resume_structured['programming_languages'] +
         resume_structured['databases']
     )
-    
     all_jd_keywords = (
         jd_structured['required_skills'] + 
         jd_structured['required_frameworks'] + 
@@ -488,31 +549,26 @@ async def analyze(
         jd_structured['required_languages'] +
         jd_structured['required_databases']
     )
-    
     junk_terms = {'general', 'dev', 'development', 'programming', 'coding', 'scripting', 'software', 'web', 'application'}
-    
     clean_resume_skills = [s for s in resume_skills_extracted if s.lower() not in junk_terms]
     clean_jd_skills = [s for s in jd_skills_extracted if s.lower() not in junk_terms]
-    
     clean_all_resume_skills = [s for s in all_resume_skills if s.lower() not in junk_terms]
     clean_all_jd_keywords = [s for s in all_jd_keywords if s.lower() not in junk_terms]
-    
     if len(clean_all_resume_skills) == 0 and len(clean_resume_skills) > 0:
-        print(f"⚠️ FALLBACK: Structured resume skills are empty/junk, using raw extracted skills")
         resume_structured['technical_skills'] = clean_resume_skills[:15]
         resume_structured['tools'] = []
         resume_structured['frameworks'] = []
         resume_structured['programming_languages'] = []
         resume_structured['databases'] = []
-    
     if len(clean_all_jd_keywords) == 0 and len(clean_jd_skills) > 0:
-        print(f"⚠️ FALLBACK: Structured JD skills are empty/junk, using raw extracted keywords")
         jd_structured['required_skills'] = clean_jd_skills[:15]
         jd_structured['required_frameworks'] = []
         jd_structured['required_tools'] = []
         jd_structured['required_languages'] = []
         jd_structured['required_databases'] = []
+    gc.collect()
 
+    # Stage 12: Profile Construction
     resume_profile_obj = {
         'candidate_name': resume_structured['candidate_name'],
         'email': resume_structured['email'],
@@ -533,7 +589,6 @@ async def analyze(
         'project_technologies': resume_structured['project_technologies'],
         'certifications': resume_structured['certifications']
     }
-
     job_profile_obj = {
         'job_role': jd_structured['job_role'],
         'required_skills': jd_structured['required_skills'],
@@ -544,9 +599,17 @@ async def analyze(
         'required_experience_years': jd_structured['required_experience_years'],
         'required_education': jd_structured['required_education']
     }
+    gc.collect()
 
-    comparison_result = compare_profiles(resume_profile_obj, job_profile_obj)
-    
+    # Stage 13: Profile Comparison
+    if "compare_profiles" not in _nlp_cache:
+        from backend.comparison_engine import compare_profiles
+        _nlp_cache["compare_profiles"] = compare_profiles
+    comparison_result = _nlp_cache["compare_profiles"](resume_profile_obj, job_profile_obj)
+    del _nlp_cache["compare_profiles"]
+    gc.collect()
+
+    # Stage 14: Skill Suggestions
     all_jd_skills = (
         jd_structured['required_skills'] + 
         jd_structured['required_frameworks'] + 
@@ -554,15 +617,20 @@ async def analyze(
         jd_structured['required_languages'] +
         jd_structured['required_databases']
     )
-    
-    skill_suggestions = generate_skill_suggestions(
+    if "generate_skill_suggestions" not in _nlp_cache:
+        from backend.suggestion_engine import generate_skill_suggestions
+        _nlp_cache["generate_skill_suggestions"] = generate_skill_suggestions
+    skill_suggestions = _nlp_cache["generate_skill_suggestions"](
         jd_skills=all_jd_skills,
         resume_skills=all_resume_skills,
         job_role=jd_structured['job_role'],
         jd_text=jd_text,
         missing_skills=comparison_result['missing_skills']
     )
+    del _nlp_cache["generate_skill_suggestions"]
+    gc.collect()
 
+    # Stage 15: DB Insert for Analysis
     try:
         resume_doc = {
             'resume_id': rid,
@@ -572,7 +640,6 @@ async def analyze(
             'created_at': datetime.utcnow()
         }
         resumes_collection.insert_one(resume_doc)
-
         jd_doc = {
             'jd_id': rid,
             'user_id': user_id,
@@ -581,7 +648,6 @@ async def analyze(
             'created_at': datetime.utcnow()
         }
         job_descriptions_collection.insert_one(jd_doc)
-
         analysis_doc = {
             'analysis_id': rid,
             'user_id': user_id,
@@ -596,7 +662,9 @@ async def analyze(
         analysis_results_collection.insert_one(analysis_doc)
     except Exception as e:
         print(f"MongoDB insertion warning: {str(e)}")
+    gc.collect()
 
+    # Stage 16: Response Construction
     return {
         "resume_id": rid,
         "cleaned_resume_text": cleaned_resume,

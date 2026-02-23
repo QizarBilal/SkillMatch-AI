@@ -1,27 +1,23 @@
+
+# Only import re globally (lightweight)
 import re
-from sklearn.feature_extraction.text import TfidfVectorizer
-from collections import Counter
 
-
-# Lazy loader for spaCy model
+# spaCy loader with only tokenizer and NER enabled
 _spacy_model = None
 def get_spacy_model():
     global _spacy_model
     if _spacy_model is None:
         import spacy
         try:
-            _spacy_model = spacy.load("en_core_web_sm")
+            _spacy_model = spacy.load("en_core_web_sm", disable=["parser", "textcat", "attribute_ruler"])
         except Exception:
             _spacy_model = None
     return _spacy_model
 
-# Lazy loader for TF-IDF vectorizer
-_tfidf_vectorizer = None
+# TF-IDF vectorizer: always create new instance per request, never global
 def get_tfidf_vectorizer(max_features=100, ngram_range=(1, 4), min_df=1):
-    global _tfidf_vectorizer
-    if _tfidf_vectorizer is None:
-        _tfidf_vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, min_df=min_df)
-    return _tfidf_vectorizer
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    return TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, min_df=min_df)
 
 base_stopwords = set("""
 a about above after again against all am an and any are as at be because been before being below between both but by could did do does doing down during each few for from further had has have having he her here hers herself him himself his how i if in into is it its itself just me more most my myself no nor not of off on once only or other our ours ourselves out over own same she should so some such than that the their theirs them themselves then there these they this those through to too under until up very was we were what when where which while who whom why will with you your yours yourself yourselves
