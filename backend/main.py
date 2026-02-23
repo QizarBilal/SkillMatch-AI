@@ -54,7 +54,6 @@ import asyncio
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
 
-    set_pytesseract_path()
 
 
 app = FastAPI()
