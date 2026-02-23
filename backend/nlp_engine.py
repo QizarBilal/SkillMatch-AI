@@ -1243,41 +1243,88 @@ def estimate_experience_years(text):
     if years_found:
         return str(max([int(y) for y in years_found]))
     
-    # Extract only work experience section to avoid counting education years
-    experience_section_match = re.search(
-        r'(?i)(professional\s*experience|work\s*experience|experience|employment|work\s*history).*?(?=\n\s*(?:education|skills|projects|certifications|technical\s*skills|summary)|\Z)',
-        text,
-        re.DOTALL
+    # Split text into sections to isolate work experience
+    text_lower = text.lower()
+    
+    # Find where experience section starts
+    experience_start = -1
+    for pattern in ['work experience', 'professional experience', 'experience', 'employment history', 'work history']:
+        match = re.search(r'\b' + pattern + r'\b', text_lower)
+        if match:
+            experience_start = match.start()
+            break
+    
+    # If no experience section found, return 0
+    if experience_start == -1:
+        return "0"
+    
+    # Find where experience section ends (where education or other sections start)
+    education_start = re.search(r'\b(education|academic|qualification)\b', text_lower[experience_start:])
+    skills_start = re.search(r'\b(skills|technical skills|competencies)\b', text_lower[experience_start:])
+    projects_start = re.search(r'\b(projects|project work)\b', text_lower[experience_start:])
+    
+    # Get the earliest end marker
+    end_positions = []
+    if education_start:
+        end_positions.append(education_start.start())
+    if skills_start:
+        end_positions.append(skills_start.start())
+    if projects_start:
+        end_positions.append(projects_start.start())
+    
+    if end_positions:
+        experience_end = experience_start + min(end_positions)
+    else:
+        experience_end = len(text)
+    
+    # Extract only the experience section
+    experience_text = text[experience_start:experience_end]
+    
+    # Look for date ranges in format: "YYYY - YYYY/Present/Current" or "Month YYYY - Present"
+    date_ranges = re.findall(r'\b(\d{4})\s*-\s*(\d{4}|present|current)\b', experience_text.lower())
+    
+    if date_ranges:
+        total_years = 0
+        for start, end in date_ranges:
+            start_year = int(start)
+            end_year = 2026 if end in ['present', 'current'] else int(end)
+            years = max(0, end_year - start_year)
+            # Only count if it's a reasonable work duration (0-10 years per position)
+            if 0 <= years <= 10:
+                total_years += years
+        return str(total_years) if total_years > 0 else "0"
+    
+    # Check for month-year patterns (e.g., "September 2025 - Present" or "May 2024")
+    month_year_matches = re.findall(
+        r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{2,4})\b',
+        experience_text.lower()
     )
     
-    if experience_section_match:
-        experience_text = experience_section_match.group()
+    if month_year_matches:
+        years = []
+        for match in month_year_matches:
+            # Handle 2-digit years (like "25" meaning 2025)
+            if len(match) == 2:
+                year_int = int(match)
+                # If 2-digit year, assume 20xx for values 00-99
+                full_year = 2000 + year_int if year_int < 100 else year_int
+            else:
+                full_year = int(match)
+            
+            # Only include years that make sense for work experience (2015-2026)
+            if 2015 <= full_year <= 2026:
+                years.append(full_year)
         
-        # Find date ranges only in the experience section
-        date_ranges = re.findall(r'\b(\d{4})\s*-\s*(\d{4}|present|current)\b', experience_text.lower())
-        if date_ranges:
-            total_years = 0
-            for start, end in date_ranges:
-                start_year = int(start)
-                end_year = 2026 if end in ['present', 'current'] else int(end)
-                years = max(0, end_year - start_year)
-                # Only count reasonable work durations (not 3+ year gaps which might be education)
-                if years <= 10:  # Single job unlikely to be more than 10 years for a resume
-                    total_years += years
-            return str(total_years) if total_years > 0 else "0"
-        else:
-            # Check for month-year ranges (e.g., "May 2024" or "Nov 2024")
-            month_year_ranges = re.findall(
-                r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})\b',
-                experience_text.lower()
-            )
-            if month_year_ranges:
-                # If we only have month-year format (internships), calculate from earliest to now
-                years = [int(y) for y in month_year_ranges]
-                earliest_year = min(years)
-                latest_year = max(years)
-                total = latest_year - earliest_year
-                return str(total) if total > 0 else "0"
+        if years:
+            earliest_year = min(years)
+            
+            # If started in 2025 or 2026 and we're in Feb 2026, that's less than 1 year
+            if earliest_year >= 2025:
+                return "0"
+            
+            # Calculate full years of experience
+            total = 2026 - earliest_year
+            return str(total) if total > 0 else "0"
     
     return "0"
 
