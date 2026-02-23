@@ -1847,27 +1847,78 @@ def parse_jd_structured(text):
         classified['technical_skills'] = clean_extracted_keywords[:15]
     
     experience_years = []
-    exp_patterns = [
-        r'(\d+)\s*\+?\s*years?',
-        r'minimum\s+(\d+)\s*years?',
-        r'at least\s+(\d+)\s*years?'
-    ]
-    for pattern in exp_patterns:
-        matches = re.findall(pattern, text.lower())
-        experience_years.extend(matches)
+    
+    # Check for freshers/entry-level first
+    text_lower = text.lower()
+    if any(term in text_lower for term in ['fresher', 'freshers', 'entry level', 'entry-level', 'no experience required', '0 years', '0 year']):
+        experience_years.append('0')
+    else:
+        # Extract experience years
+        exp_patterns = [
+            r'(\d+)\s*\+?\s*(?:to\s+\d+\s+)?years?\s+(?:of\s+)?experience',
+            r'minimum\s+(\d+)\s*years?',
+            r'at least\s+(\d+)\s*years?',
+            r'(\d+)\s*\+?\s*years?(?!\s+(?:ago|old|training))',
+        ]
+        for pattern in exp_patterns:
+            matches = re.findall(pattern, text_lower)
+            if matches:
+                experience_years.extend(matches)
+                break
     
     required_education = extract_education_degrees(text)
     
-    role_match = re.search(r'(?i)(?:position|role|title)[:|\s]+([^\n]{5,50})', text)
-    job_role = role_match.group(1).strip() if role_match else ""
+    # Extract job role with improved logic
+    job_role = ""
     
+    # Pattern 1: Look for explicit job title/role/position labels
+    role_patterns = [
+        r'(?i)(?:job\s+title|position|role|designation)[:|\s]+([^\n]{10,80})',
+        r'(?i)(?:hiring\s+for|looking\s+for)[:|\s]+([^\n]{10,80})',
+        r'(?i)(?:job.*?)[:|\s]+((?:senior|junior|lead|staff|principal)?\s*[a-z]+\s+(?:engineer|developer|analyst|designer|manager|architect))',
+    ]
+    
+    for pattern in role_patterns:
+        role_match = re.search(pattern, text)
+        if role_match:
+            candidate = role_match.group(1).strip()
+            # Clean up common suffixes
+            candidate = re.sub(r'\s*[-–]\s*.*$', '', candidate)  # Remove dash and everything after
+            candidate = re.sub(r'\s+\(.*?\)', '', candidate)  # Remove parentheses
+            if 5 <= len(candidate) <= 80:
+                job_role = candidate
+                break
+    
+    # Pattern 2: Look for role-like phrases in first 15 lines
     if not job_role:
         lines = text.split('\n')
-        for line in lines[:10]:
+        role_indicators = ['engineer', 'developer', 'analyst', 'manager', 'designer', 'architect', 
+                          'scientist', 'specialist', 'consultant', 'lead', 'trainee', 'intern']
+        
+        for line in lines[:15]:
             line_clean = line.strip()
-            if 2 <= len(line_clean.split()) <= 6 and len(line_clean) < 60:
-                role_indicators = ['engineer', 'developer', 'analyst', 'manager', 'designer', 'architect']
-                if any(indicator in line_clean.lower() for indicator in role_indicators):
+            line_lower = line_clean.lower()
+            
+            # Skip lines that are too short or too long
+            if not (10 <= len(line_clean) <= 80):
+                continue
+            
+            # Skip lines with unwanted patterns
+            if re.search(r'@|http|www|\d{4}[-/]\d{2}', line_clean):
+                continue
+            
+            # Skip common non-role phrases
+            skip_words = ['upon', 'after', 'following', 'during', 'about', 'summary', 
+                         'description', 'overview', 'responsibilities', 'requirements', 
+                         'qualifications', 'experience', 'education', 'skills', 'must']
+            if any(skip in line_lower for skip in skip_words):
+                continue
+            
+            # Check if line contains role indicator
+            if any(indicator in line_lower for indicator in role_indicators):
+                # Check word count (reasonable job title length)
+                word_count = len(line_clean.split())
+                if 2 <= word_count <= 8:
                     job_role = line_clean
                     break
     
