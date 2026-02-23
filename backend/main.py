@@ -42,23 +42,8 @@ from .admin import (
 )
 from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection, quick_health_check
 
-# Update collection usage to lazy getter functions
-import sys
-def users_collection():
-    from .mongodb import users_collection as _uc
-    return _uc()
-def submissions_collection():
-    from .mongodb import submissions_collection as _sc
-    return _sc()
-def resumes_collection():
-    from .mongodb import resumes_collection as _rc
-    return _rc()
-def job_descriptions_collection():
-    from .mongodb import job_descriptions_collection as _jc
-    return _jc()
-def analysis_results_collection():
-    from .mongodb import analysis_results_collection as _ac
-    return _ac()
+# Database collection getters are imported from .mongodb
+
 import pymongo.errors
 
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
@@ -140,12 +125,15 @@ def register(req: RegisterRequest):
             "token": token
         }
     except pymongo.errors.OperationFailure as e:
+        print(f"Registration OperationFailure: {e}")
         raise HTTPException(
             status_code=503,
-            detail="Database authentication failed. Please check MongoDB Atlas configuration: ensure user exists, password is correct, and IP is whitelisted."
+            detail=f"Database operation failed: {str(e)}"
         )
     except pymongo.errors.PyMongoError as e:
+        print(f"Registration PyMongoError: {e}")
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
+
 
 @app.post("/auth/login")
 def login(req: LoginRequest):
@@ -164,13 +152,16 @@ def login(req: LoginRequest):
             "email": user["email"],
             "token": token
         }
-    except pymongo.errors.OperationFailure:
+    except pymongo.errors.OperationFailure as e:
+        print(f"Login OperationFailure: {e}")
         raise HTTPException(
             status_code=503,
-            detail="Database authentication failed. Please check MongoDB Atlas configuration."
+            detail=f"Database authentication failed: {str(e)}"
         )
     except pymongo.errors.PyMongoError as e:
+        print(f"Login PyMongoError: {e}")
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
+
 
 @app.get("/auth/me")
 def get_current_user(user_id: int = Depends(verify_token)):
