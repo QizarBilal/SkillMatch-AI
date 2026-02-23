@@ -988,6 +988,7 @@ def extract_name(text):
 
 def extract_education_degrees(text):
     degrees = []
+    degrees_found = set()  # Track base degree types to avoid duplicates
     text_lower = text.lower()
     
     education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
@@ -997,55 +998,56 @@ def extract_education_degrees(text):
     # Specific degree patterns - order matters (most specific first)
     degree_patterns = [
         # PhD patterns
-        (r'\b(?:phd|ph\.d|ph\s+d|doctor\s+of\s+philosophy)\b', 'PhD'),
-        (r'\b(?:doctorate)\b', 'PhD'),
+        (r'\b(?:phd|ph\.d|ph\s+d|doctor\s+of\s+philosophy)\b', 'PhD', 'phd'),
+        (r'\b(?:doctorate)\b', 'PhD', 'phd'),
         
         # MBA patterns
-        (r'\b(?:mba|m\.b\.a|m\s+b\s+a|master\s+of\s+business\s+administration)\b', 'MBA'),
+        (r'\b(?:mba|m\.b\.a|m\s+b\s+a|master\s+of\s+business\s+administration)\b', 'MBA', 'mba'),
         
         # Master's in Engineering
-        (r'\b(?:m\.?tech|m\.?\s*tech|master\s+of\s+technology)\b', 'Master of Technology'),
-        (r'\b(?:m\.?e\.?|master\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Master of Engineering'),
-        (r'\b(?:me|m\.e)\b(?!\.?\w)', 'Master of Engineering'),
+        (r'\b(?:m\.?tech|m\.?\s*tech|master\s+of\s+technology)\b', 'Master of Technology', 'master-eng'),
+        (r'\b(?:m\.?e\.?|master\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Master of Engineering', 'master-eng'),
+        (r'\b(?:me|m\.e)\b(?!\.?\w)', 'Master of Engineering', 'master-eng'),
         
         # Master's in Science
-        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Master of Science - Computer Science'),
-        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\b', 'Master of Science'),
-        (r'\b(?:ms|m\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Master of Science - Computer Science'),
+        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Master of Science - Computer Science', 'master-sci'),
+        (r'\b(?:ms|m\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Master of Science - Computer Science', 'master-sci'),
+        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\b', 'Master of Science', 'master-sci'),
         
         # Master's in Arts
-        (r'\b(?:m\.?a\.?|master\s+of\s+arts)\b', 'Master of Arts'),
+        (r'\b(?:m\.?a\.?|master\s+of\s+arts)\b', 'Master of Arts', 'master-arts'),
         
         # Bachelor's in Engineering/Technology
-        (r'\b(?:b\.?tech|b\.?\s*tech|bachelor\s+of\s+technology)\b', 'Bachelor of Technology'),
-        (r'\b(?:b\.?e\.?|bachelor\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Bachelor of Engineering'),
-        (r'\b(?:be|b\.e)\b(?!\.?\w)', 'Bachelor of Engineering'),
+        (r'\b(?:b\.?tech|b\.?\s*tech|bachelor\s+of\s+technology)\b', 'Bachelor of Technology', 'bachelor-eng'),
+        (r'\b(?:b\.?e\.?|bachelor\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Bachelor of Engineering', 'bachelor-eng'),
+        (r'\b(?:be|b\.e)\b(?!\.?\w)', 'Bachelor of Engineering', 'bachelor-eng'),
         
-        # Bachelor's in Science
-        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Bachelor of Science - Computer Science'),
-        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\b', 'Bachelor of Science'),
-        (r'\b(?:bs|b\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Bachelor of Science - Computer Science'),
+        # Bachelor's in Science - SPECIFIC FIRST
+        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Bachelor of Science - Computer Science', 'bachelor-sci'),
+        (r'\b(?:bs|b\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Bachelor of Science - Computer Science', 'bachelor-sci'),
+        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\b', 'Bachelor of Science', 'bachelor-sci'),
         
         # Bachelor's in Computer Applications
-        (r'\b(?:bca|b\.c\.a|bachelor\s+of\s+computer\s+applications)\b', 'Bachelor of Computer Applications'),
+        (r'\b(?:bca|b\.c\.a|bachelor\s+of\s+computer\s+applications)\b', 'Bachelor of Computer Applications', 'bca'),
         
         # Bachelor's in Arts
-        (r'\b(?:b\.?a\.?|bachelor\s+of\s+arts)\b', 'Bachelor of Arts'),
+        (r'\b(?:b\.?a\.?|bachelor\s+of\s+arts)\b', 'Bachelor of Arts', 'bachelor-arts'),
         
         # Diploma
-        (r'\b(?:diploma\s+in\s+engineering|polytechnic\s+diploma)\b', 'Diploma in Engineering'),
-        (r'\b(?:diploma)\b', 'Diploma'),
+        (r'\b(?:diploma\s+in\s+engineering|polytechnic\s+diploma)\b', 'Diploma in Engineering', 'diploma'),
+        (r'\b(?:diploma)\b', 'Diploma', 'diploma'),
         
         # Higher Secondary / 12th
-        (r'\b(?:higher\s+secondary|12th\s+(?:grade|standard)|hsc|h\.s\.c)\b', 'Higher Secondary'),
-        (r'\b(?:intermediate|plus\s+two|\+2)\b', 'Higher Secondary'),
+        (r'\b(?:higher\s+secondary|12th\s+(?:grade|standard)|hsc|h\.s\.c)\b', 'Higher Secondary', 'higher-sec'),
+        (r'\b(?:intermediate|plus\s+two|\+2)\b', 'Higher Secondary', 'higher-sec'),
     ]
     
-    for pattern, degree_name in degree_patterns:
+    for pattern, degree_name, degree_type in degree_patterns:
         if re.search(pattern, search_lower):
-            # Avoid duplicates
-            if degree_name not in degrees:
+            # Only add if this degree type hasn't been added yet (prevents duplicate BSc/BSc-CS)
+            if degree_type not in degrees_found:
                 degrees.append(degree_name)
+                degrees_found.add(degree_type)
     
     return degrees[:5]  # Return up to 5 degrees
 
@@ -1085,32 +1087,52 @@ def extract_institutions(text):
     education_section = re.search(r'(?i)education.*?(?=\n(?:experience|projects|skills|certifications|work)|\Z)', text, re.DOTALL)
     search_text = education_section.group() if education_section else text[:3000]
     
-    education_keywords = ['university', 'college', 'institute', 'school', 'academy', 'engineering college']
+    education_keywords = ['university', 'college', 'institute', 'school', 'academy']
     
     institutions = []
+    lines = search_text.split('\n')
     
-    if nlp:
-        doc = nlp(search_text[:10000])
+    for line in lines:
+        line_lower = line.lower()
+        line_clean = line.strip()
         
-        for ent in doc.ents:
-            if ent.label_ == 'ORG':
-                org_lower = ent.text.lower()
-                if any(edu_word in org_lower for edu_word in education_keywords):
-                    if org_lower not in technical_ontology:
-                        institutions.append(ent.text)
-    
-    if not institutions:
-        lines = search_text.split('\n')
-        for line in lines:
-            line_lower = line.lower()
-            line_clean = line.strip()
-            
+        # Skip lines that are too short or too long
+        if len(line_clean) < 15 or len(line_clean) > 150:
+            continue
+        
+        # Must contain an education keyword
+        if not any(keyword in line_lower for keyword in education_keywords):
+            continue
+        
+        # Filter out lines with unwanted content
+        if re.search(r'@|http|www|\d{10}', line_clean):
+            continue
+        
+        # Skip lines that look like descriptions or bullet points
+        if line_clean.startswith('•') or line_clean.startswith('-'):
+            continue
+        
+        # Skip lines with common stop phrases
+        skip_phrases = ['earned', 'discovered', 'built', 'gained', 'worked', 'learned', 'algorithms', 'passion', 'foundation']
+        if any(phrase in line_lower for phrase in skip_phrases):
+            continue
+        
+        # Extract institution name - stop at year or dash
+        # Pattern: Institution Name - Location Year
+        match = re.search(r'^(.+?)(?:\s+[-–]|\s+\d{4})', line_clean)
+        if match:
+            inst_name = match.group(1).strip()
+            # Only keep if it contains education keyword
+            if any(keyword in inst_name.lower() for keyword in education_keywords):
+                if inst_name not in institutions:
+                    institutions.append(inst_name)
+        else:
+            # If no year/dash, take the whole line if it has edu keyword
             if any(keyword in line_lower for keyword in education_keywords):
-                if 10 <= len(line_clean) <= 100:
-                    if not re.search(r'@|http|www|\d{10}', line_clean):
-                        institutions.append(line_clean)
+                if line_clean not in institutions:
+                    institutions.append(line_clean)
     
-    return list(dict.fromkeys(institutions))[:3]
+    return institutions[:3]
 
 def extract_experience_roles(text):
     experience_section = re.search(r'(?i)(?:experience|work\s+experience).*?(?=\n(?:education|projects|skills|certifications)|\Z)', text, re.DOTALL)
