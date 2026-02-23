@@ -106,7 +106,7 @@ class LoginRequest(BaseModel):
 @app.post("/auth/register")
 def register(req: RegisterRequest):
     try:
-        existing = users_collection.find_one({"email": req.email})
+        existing = users_collection().find_one({"email": req.email})
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -115,7 +115,7 @@ def register(req: RegisterRequest):
         
         hashed = hash_password(req.password)
         
-        user_count = users_collection.count_documents({})
+        user_count = users_collection().count_documents({})
         user_id = user_count + 1
         
         user_doc = {
@@ -124,7 +124,7 @@ def register(req: RegisterRequest):
             "password_hash": hashed,
             "created_at": datetime.utcnow()
         }
-        users_collection.insert_one(user_doc)
+        users_collection().insert_one(user_doc)
         
         token = create_access_token({"user_id": user_id, "email": req.email})
         
@@ -144,7 +144,7 @@ def register(req: RegisterRequest):
 @app.post("/auth/login")
 def login(req: LoginRequest):
     try:
-        user = users_collection.find_one({"email": req.email})
+        user = users_collection().find_one({"email": req.email})
         if not user:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
@@ -169,7 +169,7 @@ def login(req: LoginRequest):
 @app.get("/auth/me")
 def get_current_user(user_id: int = Depends(verify_token)):
     try:
-        user = users_collection.find_one({"user_id": user_id})
+        user = users_collection().find_one({"user_id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -186,7 +186,7 @@ def get_current_user(user_id: int = Depends(verify_token)):
 @app.get("/submissions")
 def get_submissions(user_id: int = Depends(verify_token)):
     try:
-        submissions = list(submissions_collection.find({"user_id": user_id}).sort("created_at", -1))
+        submissions = list(submissions_collection().find({"user_id": user_id}).sort("created_at", -1))
         
         result = []
         for sub in submissions:
@@ -524,7 +524,7 @@ async def analyze(
 
     # Stage 10: DB Submission
     try:
-        submission_count = submissions_collection.count_documents({})
+        submission_count = submissions_collection().count_documents({})
         submission_id = submission_count + 1
         submission_doc = {
             "submission_id": submission_id,
@@ -541,7 +541,7 @@ async def analyze(
             "jd_skills": jd_skills_extracted,
             "created_at": datetime.utcnow()
         }
-        submissions_collection.insert_one(submission_doc)
+        submissions_collection().insert_one(submission_doc)
     except Exception as e:
         print(f"MongoDB insertion warning: {str(e)}")
     gc.collect()
@@ -651,7 +651,7 @@ async def analyze(
             'raw_text': raw,
             'created_at': datetime.utcnow()
         }
-        resumes_collection.insert_one(resume_doc)
+        resumes_collection().insert_one(resume_doc)
         jd_doc = {
             'jd_id': rid,
             'user_id': user_id,
@@ -659,7 +659,7 @@ async def analyze(
             'raw_text': jd_text,
             'created_at': datetime.utcnow()
         }
-        job_descriptions_collection.insert_one(jd_doc)
+        job_descriptions_collection().insert_one(jd_doc)
         analysis_doc = {
             'analysis_id': rid,
             'user_id': user_id,
@@ -671,7 +671,7 @@ async def analyze(
             'missing_skills_explained': skill_suggestions['missing_skills_explained'],
             'created_at': datetime.utcnow()
         }
-        analysis_results_collection.insert_one(analysis_doc)
+        analysis_results_collection().insert_one(analysis_doc)
     except Exception as e:
         print(f"MongoDB insertion warning: {str(e)}")
     gc.collect()
@@ -754,26 +754,26 @@ async def analyze(
         "job_keywords": all_jd_keywords,
         "comparison": comparison_result,
         "skill_suggestions": skill_suggestions,
-        "dataset_size": 0 if 'submission_count' not in locals() else submissions_collection.count_documents({})
+        "dataset_size": 0 if 'submission_count' not in locals() else submissions_collection().count_documents({})
     }
 
 @app.get("/admin/analytics")
 def get_admin_analytics(user_id: int = Depends(verify_token)):
-    if not validate_admin_role(users_collection, user_id):
+    if not validate_admin_role(users_collection(), user_id):
         raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
         analytics = get_analytics_summary(
-            users_collection,
-            submissions_collection,
-            analysis_results_collection
+            users_collection(),
+            submissions_collection(),
+            analysis_results_collection()
         )
         
-        top_missing = get_top_missing_skills(analysis_results_collection, limit=20)
-        top_roles = get_top_job_roles(submissions_collection, limit=15)
-        category_dist = get_skill_category_distribution(analysis_results_collection)
-        rec_dist = get_recommendation_distribution(analysis_results_collection)
-        recent = get_recent_analyses(analysis_results_collection, limit=10)
+        top_missing = get_top_missing_skills(analysis_results_collection(), limit=20)
+        top_roles = get_top_job_roles(submissions_collection(), limit=15)
+        category_dist = get_skill_category_distribution(analysis_results_collection())
+        rec_dist = get_recommendation_distribution(analysis_results_collection())
+        recent = get_recent_analyses(analysis_results_collection(), limit=10)
         
         return {
             "summary": analytics,
@@ -788,7 +788,7 @@ def get_admin_analytics(user_id: int = Depends(verify_token)):
 
 @app.get("/admin/validate")
 def validate_admin(user_id: int = Depends(verify_token)):
-    is_admin = validate_admin_role(users_collection, user_id)
+    is_admin = validate_admin_role(users_collection(), user_id)
     return {"is_admin": is_admin}
 
 @app.get("/health")
