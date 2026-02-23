@@ -994,34 +994,60 @@ def extract_education_degrees(text):
     search_text = education_section.group() if education_section else text[:3000]
     search_lower = search_text.lower()
     
-    degree_mapping = {
-        r'(?:bachelor|ba|b\.a|bs|b\.s|bsc|b\.sc|b\.e|be|b\.tech|btech)\s+(?:of\s+)?(?:engineering|science|technology|arts|computer\s+science)': 'Bachelor of Engineering',
-        r'(?:master|ma|m\.a|ms|m\.s|msc|m\.sc|m\.e|me|m\.tech|mtech)\s+(?:of\s+)?(?:engineering|science|technology|arts|computer\s+science)': 'Master of Engineering',
-        r'(?:phd|ph\.d|doctorate)': 'PhD',
-        r'(?:mba|m\.b\.a)': 'MBA',
-        r'(?:diploma)': 'Diploma'
-    }
-    
-    for pattern, degree_name in degree_mapping.items():
-        if re.search(pattern, search_lower):
-            degrees.append(degree_name)
-    
-    if not degrees:
-        simple_patterns = {
-            r'\bb\.?\s*e\.?\b': 'Bachelor of Engineering',
-            r'\bb\.?\s*tech\b': 'Bachelor of Technology',
-            r'\bb\.?\s*s\.?c?\b\s+(?:computer|engineering)': 'Bachelor of Science',
-            r'\bm\.?\s*e\.?\b': 'Master of Engineering',
-            r'\bm\.?\s*tech\b': 'Master of Technology',
-            r'\bm\.?\s*s\.?c?\b\s+(?:computer|engineering)': 'Master of Science'
-        }
+    # Specific degree patterns - order matters (most specific first)
+    degree_patterns = [
+        # PhD patterns
+        (r'\b(?:phd|ph\.d|ph\s+d|doctor\s+of\s+philosophy)\b', 'PhD'),
+        (r'\b(?:doctorate)\b', 'PhD'),
         
-        for pattern, degree_name in simple_patterns.items():
-            if re.search(pattern, search_lower):
-                degrees.append(degree_name)
-                break
+        # MBA patterns
+        (r'\b(?:mba|m\.b\.a|m\s+b\s+a|master\s+of\s+business\s+administration)\b', 'MBA'),
+        
+        # Master's in Engineering
+        (r'\b(?:m\.?tech|m\.?\s*tech|master\s+of\s+technology)\b', 'Master of Technology'),
+        (r'\b(?:m\.?e\.?|master\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Master of Engineering'),
+        (r'\b(?:me|m\.e)\b(?!\.?\w)', 'Master of Engineering'),
+        
+        # Master's in Science
+        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Master of Science - Computer Science'),
+        (r'\b(?:m\.?sc|m\.?\s*sc|master\s+of\s+science)\b', 'Master of Science'),
+        (r'\b(?:ms|m\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Master of Science - Computer Science'),
+        
+        # Master's in Arts
+        (r'\b(?:m\.?a\.?|master\s+of\s+arts)\b', 'Master of Arts'),
+        
+        # Bachelor's in Engineering/Technology
+        (r'\b(?:b\.?tech|b\.?\s*tech|bachelor\s+of\s+technology)\b', 'Bachelor of Technology'),
+        (r'\b(?:b\.?e\.?|bachelor\s+of\s+engineering)\s*(?:\(|\-|\bin\b)?(?:.*?engineering)', 'Bachelor of Engineering'),
+        (r'\b(?:be|b\.e)\b(?!\.?\w)', 'Bachelor of Engineering'),
+        
+        # Bachelor's in Science
+        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\s*(?:\(|\-|\bin\b)?(?:.*?(?:computer\s+science|cs\b))', 'Bachelor of Science - Computer Science'),
+        (r'\b(?:b\.?sc|b\.?\s*sc|bachelor\s+of\s+science)\b', 'Bachelor of Science'),
+        (r'\b(?:bs|b\.s)\s+(?:in\s+)?(?:computer\s+science|cs\b)', 'Bachelor of Science - Computer Science'),
+        
+        # Bachelor's in Computer Applications
+        (r'\b(?:bca|b\.c\.a|bachelor\s+of\s+computer\s+applications)\b', 'Bachelor of Computer Applications'),
+        
+        # Bachelor's in Arts
+        (r'\b(?:b\.?a\.?|bachelor\s+of\s+arts)\b', 'Bachelor of Arts'),
+        
+        # Diploma
+        (r'\b(?:diploma\s+in\s+engineering|polytechnic\s+diploma)\b', 'Diploma in Engineering'),
+        (r'\b(?:diploma)\b', 'Diploma'),
+        
+        # Higher Secondary / 12th
+        (r'\b(?:higher\s+secondary|12th\s+(?:grade|standard)|hsc|h\.s\.c)\b', 'Higher Secondary'),
+        (r'\b(?:intermediate|plus\s+two|\+2)\b', 'Higher Secondary'),
+    ]
     
-    return list(dict.fromkeys(degrees))[:3]
+    for pattern, degree_name in degree_patterns:
+        if re.search(pattern, search_lower):
+            # Avoid duplicates
+            if degree_name not in degrees:
+                degrees.append(degree_name)
+    
+    return degrees[:5]  # Return up to 5 degrees
 
 def extract_education_fields(text):
     fields = []
