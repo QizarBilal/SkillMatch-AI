@@ -272,9 +272,9 @@ python -m spacy download en_core_web_sm
 
 This project is licensed under the MIT License.
 
-## 👥 Authors
+## 👥 Author
 
-- Your Name - Initial work
+- Mohammed Qizar Bilal - Full Stack Development & AI Integration
 
 ## 🙏 Acknowledgments
 
@@ -286,8 +286,8 @@ This project is licensed under the MIT License.
 
 ## 📧 Contact
 
-For questions or support, please open an issue or contact: your.email@example.com
+For questions or support, please open an issue or contact: bilalqizar@gmail.com
 
 ---
 
-Made with ❤️ by the SkillMatch Team
+Made with ❤️ by **Mohammed Qizar Bilal** as part of **Infosys Springboard AI Internship**
