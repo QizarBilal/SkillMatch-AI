@@ -17,7 +17,19 @@ import uuid
 import json
 import io
 import re
+import os
+import gc
+import platform
+import asyncio
+import warnings
 from datetime import datetime
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+import pytesseract
+try:
+    import fitz # PyMuPDF
+except ImportError:
+    fitz = None
+
 from .nlp_engine import clean_text, extract_skills, extract_keywords, parse_resume_structured, parse_jd_structured
 from .nlp_preprocessing import preprocess_text, extract_skills_hybrid, extract_keywords_hybrid, generate_tfidf_vectors
 from .auth import hash_password, verify_password, create_access_token, verify_token
@@ -48,10 +60,7 @@ def analysis_results_collection():
     from .mongodb import analysis_results_collection as _ac
     return _ac()
 import pymongo.errors
-import warnings
-import os
-import platform
-import asyncio
+
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
 
@@ -330,7 +339,8 @@ def read_pdf(file):
     print(f"Sample text: {text[:200] if text else 'No text'}")
     
     try:
-        import fitz
+        if not fitz:
+            raise ImportError("PyMuPDF (fitz) not installed")
         
         pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
         ocr_text = ""
@@ -407,7 +417,6 @@ def read_image(file):
     return text
 
 
-import gc
 
 # Global runtime cache for NLP/ML objects
 _nlp_cache = {}
@@ -426,9 +435,6 @@ async def analyze(
         elif ext == "docx":
             return read_docx(file)
         else:
-            # Import OCR only for images
-            from PIL import Image
-            import pytesseract
             set_pytesseract_path()
             return read_image(file)
 
