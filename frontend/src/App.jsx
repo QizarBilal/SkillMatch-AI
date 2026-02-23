@@ -1,35 +1,77 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect, useState, createContext, useContext } from 'react'
 import Login from './Login'
 import Signup from './Signup'
 import Dashboard from './Dashboard'
 import Admin from './Admin'
 
-function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null)
+const AuthContext = createContext(null)
+
+export const useAuth = () => useContext(AuthContext)
+
+function AuthProvider({ children }) {
+  const [token, setToken] = useState(localStorage.getItem('token'))
+  const navigate = useNavigate()
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    setIsAuthenticated(!!token)
-  }, [])
+    const handleAuthError = () => {
+      setToken(null)
+      navigate('/login')
+    }
+    window.addEventListener('auth-error', handleAuthError)
+    return () => window.removeEventListener('auth-error', handleAuthError)
+  }, [navigate])
 
-  if (isAuthenticated === null) {
-    return <div style={{minHeight: '100vh', background: '#0a0e27', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff'}}>Loading...</div>
+  const login = (newToken, userData = {}) => {
+    localStorage.setItem('token', newToken)
+    if (userData.user_id) localStorage.setItem('user_id', userData.user_id)
+    if (userData.email) localStorage.setItem('user_email', userData.email)
+    setToken(newToken)
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />
+  const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user_id')
+    localStorage.removeItem('user_email')
+    localStorage.removeItem('skillmatch_result')
+    setToken(null)
+    navigate('/login')
+  }
+
+  return (
+    <AuthContext.Provider value={{ token, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+function ProtectedRoute({ children, requireAuth = true }) {
+  const { token } = useAuth()
+
+  if (requireAuth && !token) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!requireAuth && token) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
+          <Route path="/signup" element={<ProtectedRoute requireAuth={false}><Signup /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
+

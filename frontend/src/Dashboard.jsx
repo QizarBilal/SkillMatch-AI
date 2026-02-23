@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import API_BASE_URL from './config'
+import { useAuth } from './App'
+import api from './api'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -889,7 +890,7 @@ const getResponsiveStyles = (isMobile, isTablet) => ({
 export default function Dashboard() {
   const { isMobile, isTablet } = useWindowSize();
   const styles = getResponsiveStyles(isMobile, isTablet);
-  
+
   const [file, setFile] = useState(null)
   const [jd, setJd] = useState("")
   const [jdFile, setJdFile] = useState(null)
@@ -916,6 +917,7 @@ export default function Dashboard() {
   const [skillQueue, setSkillQueue] = useState([])
   const [keywordQueue, setKeywordQueue] = useState([])
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const userEmail = localStorage.getItem('user_email') || ''
 
@@ -924,15 +926,9 @@ export default function Dashboard() {
   }, [])
 
   const checkAdminStatus = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/validate`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
+      const data = await api.get('/admin/validate')
+      if (data) {
         setIsAdmin(data.is_admin)
       }
     } catch (error) {
@@ -941,11 +937,7 @@ export default function Dashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user_id')
-    localStorage.removeItem('user_email')
-    localStorage.removeItem('skillmatch_result')
-    navigate('/login')
+    logout()
   }
 
   useEffect(() => {
@@ -975,13 +967,13 @@ export default function Dashboard() {
         dotCount = (dotCount + 1) % 4
         setScanDots('.'.repeat(dotCount))
       }, 400)
-      
+
       const timer = setTimeout(() => {
         setStage(2)
         clearInterval(dotInterval)
         setScanDots("")
       }, 3000)
-      
+
       return () => {
         clearTimeout(timer)
         clearInterval(dotInterval)
@@ -1036,7 +1028,7 @@ export default function Dashboard() {
         { label: 'Education', value: processingData?.resume_profile?.education?.degrees?.length > 0 ? processingData.resume_profile.education.degrees.join(', ') : null },
         { label: 'Experience', value: processingData?.resume_profile?.experience?.years_estimated ? `${processingData.resume_profile.experience.years_estimated} years` : null }
       ].filter(f => f && f.value)
-      
+
       let index = 0
       const interval = setInterval(() => {
         if (index < fields.length) {
@@ -1089,7 +1081,7 @@ export default function Dashboard() {
 
   const submit = async () => {
     if (!file || (!jd && !jdFile)) return
-    
+
     const token = localStorage.getItem('token')
     if (!token) {
       navigate('/login')
@@ -1098,7 +1090,7 @@ export default function Dashboard() {
 
     const previewUrl = URL.createObjectURL(file)
     setFilePreviewUrl(previewUrl)
-    
+
     setResult(null)
     setProcessingData(null)
     setLoading(true)
@@ -1109,10 +1101,10 @@ export default function Dashboard() {
     setDisplayedFields([])
     setSkillQueue([])
     setKeywordQueue([])
-    
+
     const form = new FormData()
     form.append("resume", file)
-    
+
     if (jdFile) {
       form.append("jd_file", jdFile)
     } else if (jd) {
@@ -1120,32 +1112,12 @@ export default function Dashboard() {
     }
 
     try {
-      const r = await fetch(`${API_BASE_URL}/analyze`, {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: form
-      })
-      
-      if (r.status === 401) {
-        alert("Session expired. Please login again.")
-        navigate('/login')
-        return
+      const data = await api.post('/analyze', form)
+      if (data) {
+        setProcessingData(data)
       }
-
-      if (!r.ok) {
-        const error = await r.json()
-        alert(error.detail || "Failed to process resume. Please try with a PDF or DOCX file.")
-        setLoading(false)
-        setStage(0)
-        return
-      }
-      
-      const data = await r.json()
-      setProcessingData(data)
     } catch (err) {
-      alert("Network error. Please check if the backend server is running.")
+      alert(err.message || "Failed to process resume")
       setLoading(false)
       setStage(0)
     }
@@ -1257,14 +1229,14 @@ export default function Dashboard() {
                 <div style={styles.scanPanel}>
                   <div style={styles.previewContainer}>
                     {file.type === 'application/pdf' && (
-                      <iframe 
+                      <iframe
                         src={filePreviewUrl}
                         style={styles.previewFrame}
                         title="PDF Preview"
                       />
                     )}
                     {(file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg') && (
-                      <img 
+                      <img
                         src={filePreviewUrl}
                         alt="Resume Preview"
                         style={styles.previewImage}
@@ -1272,10 +1244,10 @@ export default function Dashboard() {
                     )}
                     {file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && (
                       <div style={styles.docPreview}>
-                        <div style={{fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#111'}}>
+                        <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#111' }}>
                           {file.name}
                         </div>
-                        <div style={{color: '#333', whiteSpace: 'pre-wrap'}}>
+                        <div style={{ color: '#333', whiteSpace: 'pre-wrap' }}>
                           {processingData?.resume_preprocessed?.clean_text?.substring(0, 800) || 'Loading document preview...'}
                         </div>
                       </div>
@@ -1306,7 +1278,7 @@ export default function Dashboard() {
                 <div style={styles.stageTitle}>Extracting technical skills and tools</div>
                 <div style={styles.skillGrid}>
                   {displayedSkills.map((s, i) => (
-                    <div key={i} style={{...styles.animatedChip, animationDelay: `${i * 0.08}s`}}>{s}</div>
+                    <div key={i} style={{ ...styles.animatedChip, animationDelay: `${i * 0.08}s` }}>{s}</div>
                   ))}
                 </div>
               </>
@@ -1335,7 +1307,7 @@ export default function Dashboard() {
                 <div style={styles.stageTitle}>Analyzing job description</div>
                 <div style={styles.shimmerPanel}>
                   <div style={styles.shimmer}></div>
-                  <div style={{fontSize: '14px', color: '#cbd5e1', lineHeight: '1.8', textAlign: 'left'}}>
+                  <div style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: '1.8', textAlign: 'left' }}>
                     {(processingData?.cleaned_job_description_text || jd).substring(0, 400)}...
                   </div>
                 </div>
@@ -1347,7 +1319,7 @@ export default function Dashboard() {
                 <div style={styles.stageTitle}>Extracting role requirements</div>
                 <div style={styles.skillGrid}>
                   {displayedKeywords.map((k, i) => (
-                    <div key={i} style={{...styles.keywordChipAnimated, animationDelay: `${i * 0.08}s`}}>{k}</div>
+                    <div key={i} style={{ ...styles.keywordChipAnimated, animationDelay: `${i * 0.08}s` }}>{k}</div>
                   ))}
                 </div>
               </>
@@ -1370,7 +1342,7 @@ export default function Dashboard() {
         </div>
         <div style={styles.navRight}>
           {isAdmin && (
-            <button 
+            <button
               onClick={() => navigate('/admin')}
               style={styles.adminBtn}
             >
@@ -1392,7 +1364,7 @@ export default function Dashboard() {
 
       <div style={styles.container}>
         <div style={styles.grid}>
-          <div 
+          <div
             style={{
               ...styles.card,
               ...(hoveredCard === 'upload' ? styles.cardHover : {})
@@ -1403,9 +1375,9 @@ export default function Dashboard() {
             <div style={styles.sectionTitle}>
               <span>📄</span> Resume Intake
             </div>
-            
+
             {!file ? (
-              <label 
+              <label
                 style={{
                   ...styles.uploadZone,
                   ...((uploadHover || dragActive) ? styles.uploadZoneActive : {})
@@ -1417,8 +1389,8 @@ export default function Dashboard() {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   onChange={e => setFile(e.target.files[0])}
                   style={{ display: 'none' }}
                   accept=".pdf,.docx,.jpg,.png"
@@ -1445,7 +1417,7 @@ export default function Dashboard() {
                 </div>
               </label>
             ) : (
-              <div 
+              <div
                 style={{
                   ...styles.filePreview,
                   ...(filePreviewHover ? styles.filePreviewHover : {})
@@ -1460,7 +1432,7 @@ export default function Dashboard() {
                     <div style={styles.fileSize}>{formatFileSize(file.size)}</div>
                   </div>
                 </div>
-                <button 
+                <button
                   style={{
                     ...styles.replaceBtn,
                     ...(replaceBtnHover ? styles.replaceBtnHover : {})
@@ -1475,7 +1447,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div 
+          <div
             style={{
               ...styles.card,
               ...(hoveredCard === 'jd' ? styles.cardHover : {})
@@ -1486,7 +1458,7 @@ export default function Dashboard() {
             <div style={styles.sectionTitle}>
               <span>📋</span> Job Description Input
             </div>
-            
+
             <div style={styles.modeToggle}>
               <button
                 style={{
@@ -1563,7 +1535,7 @@ export default function Dashboard() {
                       style={{ display: 'none' }}
                       onChange={e => setJdFile(e.target.files[0])}
                     />
-                    
+
                     <div style={{
                       ...styles.uploadIconWrapper,
                       ...(jdUploadHover || jdDragActive ? styles.uploadIconWrapperActive : {})
@@ -1638,7 +1610,7 @@ export default function Dashboard() {
 
         {result && (
           <>
-            <div 
+            <div
               style={{
                 ...styles.card,
                 ...(hoveredCard === 'nlpPreview' ? styles.cardHover : {}),
@@ -1657,7 +1629,7 @@ export default function Dashboard() {
                 gap: '24px'
               }}>
                 <div>
-                  <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Processed Resume</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Processed Resume</div>
                   <div style={{
                     background: 'rgba(10, 14, 27, 0.6)',
                     borderRadius: '12px',
@@ -1672,7 +1644,7 @@ export default function Dashboard() {
                   }}>
                     {result.resume_preprocessed?.clean_text || 'No processed text'}
                   </div>
-                  <div style={{fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Extracted Skills</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Extracted Skills</div>
                   <div style={styles.chipContainer}>
                     {result.resume_skills_extracted?.slice(0, 12).map(s => (
                       <span key={s} style={styles.skillChip}>{s}</span>
@@ -1681,7 +1653,7 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Processed Job Description</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Processed Job Description</div>
                   <div style={{
                     background: 'rgba(10, 14, 27, 0.6)',
                     borderRadius: '12px',
@@ -1696,7 +1668,7 @@ export default function Dashboard() {
                   }}>
                     {result.jd_preprocessed?.clean_text || 'No processed text'}
                   </div>
-                  <div style={{fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Extracted Keywords</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Extracted Keywords</div>
                   <div style={styles.chipContainer}>
                     {result.jd_skills_extracted?.slice(0, 12).map(k => (
                       <span key={k} style={styles.keywordChip}>{k}</span>
@@ -1712,7 +1684,7 @@ export default function Dashboard() {
               gap: '24px',
               marginBottom: '32px'
             }}>
-              <div 
+              <div
                 style={{
                   ...styles.card,
                   ...(hoveredCard === 'resumeProfile' ? styles.cardHover : {})
@@ -1723,10 +1695,10 @@ export default function Dashboard() {
                 <div style={styles.sectionTitle}>
                   <span>👤</span> Resume Structured Profile
                 </div>
-                
-                <div style={{marginBottom: '20px'}}>
-                  <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Personal Information</div>
-                  <div style={{fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8'}}>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Information</div>
+                  <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8' }}>
                     {result.resume_profile?.candidate_name && result.resume_profile.candidate_name !== 'N/A' && (
                       <div><strong>Name:</strong> {result.resume_profile.candidate_name}</div>
                     )}
@@ -1743,31 +1715,31 @@ export default function Dashboard() {
                 </div>
 
                 {(result.resume_profile?.education?.degrees?.length > 0 || result.resume_profile?.education?.fields?.length > 0 || result.resume_profile?.education?.institutions?.length > 0) && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Education</div>
-                    <div style={{fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8'}}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Education</div>
+                    <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8' }}>
                       {result.resume_profile?.education?.degrees?.map((d, i) => (
                         <div key={i}><strong>{d}</strong></div>
                       ))}
                       {result.resume_profile?.education?.fields?.length > 0 && (
-                        <div style={{marginTop: '4px'}}><strong>Field:</strong> {result.resume_profile.education.fields.join(', ')}</div>
+                        <div style={{ marginTop: '4px' }}><strong>Field:</strong> {result.resume_profile.education.fields.join(', ')}</div>
                       )}
                       {result.resume_profile?.education?.institutions?.length > 0 && (
-                        <div style={{marginTop: '4px'}}><strong>Institution:</strong> {result.resume_profile.education.institutions.join(', ')}</div>
+                        <div style={{ marginTop: '4px' }}><strong>Institution:</strong> {result.resume_profile.education.institutions.join(', ')}</div>
                       )}
                     </div>
                   </div>
                 )}
 
                 {(result.resume_profile?.experience?.roles?.length > 0 || result.resume_profile?.experience?.years_estimated) && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Experience</div>
-                    <div style={{fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8'}}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Experience</div>
+                    <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8' }}>
                       {result.resume_profile?.experience?.roles?.slice(0, 3).map((role, i) => (
                         <div key={i}>• {role}</div>
                       ))}
                       {result.resume_profile?.experience?.years_estimated && (
-                        <div style={{marginTop: '8px'}}><strong>Total Experience:</strong> {result.resume_profile.experience.years_estimated} years</div>
+                        <div style={{ marginTop: '8px' }}><strong>Total Experience:</strong> {result.resume_profile.experience.years_estimated} years</div>
                       )}
                     </div>
                   </div>
@@ -1775,7 +1747,7 @@ export default function Dashboard() {
 
                 {result.resume_profile?.technical_expertise?.languages?.length > 0 && (
                   <div>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Programming Languages</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Programming Languages</div>
                     <div style={styles.chipContainer}>
                       {result.resume_profile.technical_expertise.languages.slice(0, 10).map(l => (
                         <span key={l} style={styles.skillChip}>{l}</span>
@@ -1785,8 +1757,8 @@ export default function Dashboard() {
                 )}
 
                 {result.resume_profile?.technical_expertise?.skills?.length > 0 && (
-                  <div style={{marginTop: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Technical Skills</div>
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Technical Skills</div>
                     <div style={styles.chipContainer}>
                       {result.resume_profile.technical_expertise.skills.slice(0, 10).map(s => (
                         <span key={s} style={styles.skillChip}>{s}</span>
@@ -1796,8 +1768,8 @@ export default function Dashboard() {
                 )}
 
                 {result.resume_profile?.technical_expertise?.frameworks?.length > 0 && (
-                  <div style={{marginTop: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Frameworks</div>
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frameworks</div>
                     <div style={styles.chipContainer}>
                       {result.resume_profile.technical_expertise.frameworks.slice(0, 10).map(f => (
                         <span key={f} style={styles.skillChip}>{f}</span>
@@ -1807,8 +1779,8 @@ export default function Dashboard() {
                 )}
 
                 {result.resume_profile?.technical_expertise?.tools?.length > 0 && (
-                  <div style={{marginTop: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Tools</div>
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tools</div>
                     <div style={styles.chipContainer}>
                       {result.resume_profile.technical_expertise.tools.slice(0, 10).map(t => (
                         <span key={t} style={styles.skillChip}>{t}</span>
@@ -1818,8 +1790,8 @@ export default function Dashboard() {
                 )}
 
                 {result.resume_profile?.technical_expertise?.databases?.length > 0 && (
-                  <div style={{marginTop: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Databases</div>
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Databases</div>
                     <div style={styles.chipContainer}>
                       {result.resume_profile.technical_expertise.databases.slice(0, 10).map(d => (
                         <span key={d} style={styles.skillChip}>{d}</span>
@@ -1829,7 +1801,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div 
+              <div
                 style={{
                   ...styles.card,
                   ...(hoveredCard === 'jobProfile' ? styles.cardHover : {})
@@ -1841,16 +1813,16 @@ export default function Dashboard() {
                   <span>💼</span> Job Requirement Profile
                 </div>
 
-                <div style={{marginBottom: '20px'}}>
-                  <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Job Role</div>
-                  <div style={{fontSize: '16px', color: '#e2e8f0', fontWeight: '600'}}>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Job Role</div>
+                  <div style={{ fontSize: '16px', color: '#e2e8f0', fontWeight: '600' }}>
                     {result.job_profile?.role || 'Not specified'}
                   </div>
                 </div>
 
                 {result.job_profile?.required_technical?.languages?.length > 0 && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Required Languages</div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Languages</div>
                     <div style={styles.chipContainer}>
                       {result.job_profile.required_technical.languages.map(l => (
                         <span key={l} style={styles.keywordChip}>{l}</span>
@@ -1860,8 +1832,8 @@ export default function Dashboard() {
                 )}
 
                 {result.job_profile?.required_technical?.skills?.length > 0 && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Required Skills</div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Skills</div>
                     <div style={styles.chipContainer}>
                       {result.job_profile.required_technical.skills.map(s => (
                         <span key={s} style={styles.keywordChip}>{s}</span>
@@ -1871,8 +1843,8 @@ export default function Dashboard() {
                 )}
 
                 {result.job_profile?.required_technical?.frameworks?.length > 0 && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Required Frameworks</div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Frameworks</div>
                     <div style={styles.chipContainer}>
                       {result.job_profile.required_technical.frameworks.map(f => (
                         <span key={f} style={styles.keywordChip}>{f}</span>
@@ -1882,8 +1854,8 @@ export default function Dashboard() {
                 )}
 
                 {result.job_profile?.required_technical?.tools?.length > 0 && (
-                  <div style={{marginBottom: '20px'}}>
-                    <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Required Tools</div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Tools</div>
                     <div style={styles.chipContainer}>
                       {result.job_profile.required_technical.tools.map(t => (
                         <span key={t} style={styles.keywordChip}>{t}</span>
@@ -1893,8 +1865,8 @@ export default function Dashboard() {
                 )}
 
                 <div>
-                  <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>Experience Required</div>
-                  <div style={{fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8'}}>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Experience Required</div>
+                  <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.8' }}>
                     <div><strong>Years:</strong> {result.job_profile?.requirements?.experience_years || 'Not specified'}</div>
                     {result.job_profile?.requirements?.education?.length > 0 && (
                       <div><strong>Education:</strong> {result.job_profile.requirements.education.join(', ')}</div>
@@ -1904,7 +1876,7 @@ export default function Dashboard() {
               </div>
 
               {result.comparison && (
-                <div 
+                <div
                   style={{
                     ...styles.card,
                     ...(hoveredCard === 'comparison' ? styles.cardHover : {}),
@@ -1917,13 +1889,13 @@ export default function Dashboard() {
                     <span>⚖️</span> Profile Comparison Analysis
                   </div>
 
-                  <div style={{marginBottom: '24px', padding: '16px', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.3)'}}>
-                    <div style={{fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Core Match Percentage</div>
-                    <div style={{fontSize: '28px', color: '#4ade80', fontWeight: '700'}}>
+                  <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '8px', border: '1px solid rgba(74, 222, 128, 0.3)' }}>
+                    <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Core Match Percentage</div>
+                    <div style={{ fontSize: '28px', color: '#4ade80', fontWeight: '700' }}>
                       {result.comparison.match_percentage !== undefined ? result.comparison.match_percentage.toFixed(1) : '0.0'}%
                     </div>
                     {result.comparison.recommendation && (
-                      <div style={{marginTop: '12px', fontSize: '16px', fontWeight: '600', color: result.comparison.recommendation.includes('Strong Fit') || result.comparison.recommendation.includes('Good Skill Match') ? '#4ade80' : result.comparison.recommendation.includes('Partial Match') ? '#fb923c' : '#ef4444'}}>
+                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '600', color: result.comparison.recommendation.includes('Strong Fit') || result.comparison.recommendation.includes('Good Skill Match') ? '#4ade80' : result.comparison.recommendation.includes('Partial Match') ? '#fb923c' : '#ef4444' }}>
                         {(result.comparison.recommendation.includes('Strong Fit') || result.comparison.recommendation.includes('Good Skill Match')) && '✅ '}
                         {result.comparison.recommendation.includes('Partial Match') && '⚠️ '}
                         {result.comparison.recommendation.includes('Weak Match') && '❌ '}
@@ -1933,60 +1905,60 @@ export default function Dashboard() {
                   </div>
 
                   {result.comparison.experience_gap_warning && (
-                    <div style={{marginBottom: '20px', padding: '14px', background: 'rgba(251, 146, 60, 0.1)', borderRadius: '8px', border: '1px solid rgba(251, 146, 60, 0.3)'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                    <div style={{ marginBottom: '20px', padding: '14px', background: 'rgba(251, 146, 60, 0.1)', borderRadius: '8px', border: '1px solid rgba(251, 146, 60, 0.3)' }}>
+                      <div style={{ fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>⚠️</span>
                         <span>Experience Gap Warning</span>
                       </div>
-                      <div style={{fontSize: '13px', color: '#cbd5e1', lineHeight: '1.5'}}>
+                      <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.5' }}>
                         {result.comparison.experience_gap_warning}
                       </div>
                     </div>
                   )}
 
                   {result.comparison.matched_skills?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✓ Matched Core Skills</div>
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '13px', color: '#4ade80', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>✓ Matched Core Skills</div>
                       <div style={styles.chipContainer}>
                         {result.comparison.matched_skills.map(s => (
-                          <span key={s} style={{...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80'}}>{s}</span>
+                          <span key={s} style={{ ...styles.skillChip, background: 'rgba(74, 222, 128, 0.2)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80' }}>{s}</span>
                         ))}
                       </div>
                     </div>
                   )}
 
                   {result.comparison.missing_skills?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>⚠ Missing Core Skills</div>
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '13px', color: '#fb923c', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⚠ Missing Core Skills</div>
                       <div style={styles.chipContainer}>
                         {result.comparison.missing_skills.map(s => (
-                          <span key={s} style={{...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c'}}>{s}</span>
+                          <span key={s} style={{ ...styles.skillChip, background: 'rgba(251, 146, 60, 0.2)', border: '1px solid rgba(251, 146, 60, 0.4)', color: '#fb923c' }}>{s}</span>
                         ))}
                       </div>
                     </div>
                   )}
 
                   {result.comparison.additional_skills?.length > 0 && (
-                    <div style={{marginBottom: '20px'}}>
-                      <div style={{fontSize: '13px', color: '#8b5cf6', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'}}>✨ Additional Skills (Bonus)</div>
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '13px', color: '#8b5cf6', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>✨ Additional Skills (Bonus)</div>
                       <div style={styles.chipContainer}>
                         {result.comparison.additional_skills.map(s => (
-                          <span key={s} style={{...styles.skillChip, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid rgba(139, 92, 246, 0.4)', color: '#8b5cf6'}}>{s}</span>
+                          <span key={s} style={{ ...styles.skillChip, background: 'rgba(139, 92, 246, 0.2)', border: '1px solid rgba(139, 92, 246, 0.4)', color: '#8b5cf6' }}>{s}</span>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px'}}>
-                    <div style={{padding: '16px', background: result.comparison.experience_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.experience_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
-                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Experience Match</div>
-                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.experience_match ? '#4ade80' : '#ef4444'}}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
+                    <div style={{ padding: '16px', background: result.comparison.experience_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.experience_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
+                      <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Experience Match</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: result.comparison.experience_match ? '#4ade80' : '#ef4444' }}>
                         {result.comparison.experience_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
                       </div>
                     </div>
-                    <div style={{padding: '16px', background: result.comparison.education_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.education_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
-                      <div style={{fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px'}}>Education Match</div>
-                      <div style={{fontSize: '20px', fontWeight: '700', color: result.comparison.education_match ? '#4ade80' : '#ef4444'}}>
+                    <div style={{ padding: '16px', background: result.comparison.education_match ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: `1px solid ${result.comparison.education_match ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}` }}>
+                      <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Education Match</div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: result.comparison.education_match ? '#4ade80' : '#ef4444' }}>
                         {result.comparison.education_match ? '✓ Meets Requirement' : '✗ Below Requirement'}
                       </div>
                     </div>
@@ -1995,7 +1967,7 @@ export default function Dashboard() {
               )}
 
               {result.skill_suggestions && result.skill_suggestions.suggested_skills?.length > 0 && (
-                <div 
+                <div
                   style={{
                     ...styles.card,
                     ...(hoveredCard === 'suggestions' ? styles.cardHover : {}),
@@ -2008,15 +1980,15 @@ export default function Dashboard() {
                     <span>💡</span> Skill Recommendations
                   </div>
 
-                  <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)'}}>
-                    <div style={{fontSize: '14px', color: '#cbd5e1'}}>
+                  <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                    <div style={{ fontSize: '14px', color: '#cbd5e1' }}>
                       Based on the job requirements and industry trends, we recommend learning these skills to improve your match score:
                     </div>
                   </div>
 
-                  <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px'}}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                     {result.skill_suggestions.suggested_skills.map((suggestion, idx) => (
-                      <div 
+                      <div
                         key={idx}
                         style={{
                           padding: '16px',
@@ -2026,14 +1998,14 @@ export default function Dashboard() {
                           transition: 'all 0.3s ease'
                         }}
                       >
-                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px'}}>
-                          <span style={{fontSize: '15px', fontWeight: '700', color: '#8b5cf6'}}>{suggestion.skill}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: '700', color: '#8b5cf6' }}>{suggestion.skill}</span>
                           {suggestion.priority === 'high' && (
-                            <span style={{fontSize: '10px', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderRadius: '10px', fontWeight: '600'}}>HIGH</span>
+                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderRadius: '10px', fontWeight: '600' }}>HIGH</span>
                           )}
                         </div>
-                        <div style={{fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontStyle: 'italic'}}>{suggestion.reason}</div>
-                        <div style={{fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6'}}>{suggestion.explanation}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontStyle: 'italic' }}>{suggestion.reason}</div>
+                        <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6' }}>{suggestion.explanation}</div>
                       </div>
                     ))}
                   </div>

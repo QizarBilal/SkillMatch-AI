@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import API_BASE_URL from './config'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from './App'
+import api from './api'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -38,6 +39,7 @@ export default function Signup() {
   const [passwordFocused, setPasswordFocused] = useState(false)
   const [confirmFocused, setConfirmFocused] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const getPasswordStrength = () => {
     if (!password) return { strength: 0, label: '', color: '' }
@@ -74,30 +76,17 @@ export default function Signup() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.detail || 'Registration failed')
-        setLoading(false)
-        return
+      const data = await api.post('/auth/register', { email, password })
+      if (data) {
+        login(data.token, { user_id: data.user_id, email: data.email })
+        navigate('/dashboard')
       }
-
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user_id', data.user_id)
-      localStorage.setItem('user_email', data.email)
-
-      navigate('/dashboard')
     } catch (err) {
-      setError('Network error. Please try again.')
+      setError(err.message || 'Registration failed')
       setLoading(false)
     }
   }
+
 
   const styles = {
     container: {
@@ -302,7 +291,7 @@ export default function Signup() {
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 0 20px rgba(99, 102, 241, 0.2) !important;
         }
       `}</style>
-      
+
       <div style={styles.authCard}>
         <div style={styles.logoSection}>
           <div style={styles.logo}>SkillMatch</div>
@@ -313,7 +302,7 @@ export default function Signup() {
           {error && <div style={styles.error}>{error}</div>}
 
           <div style={styles.inputGroup}>
-            <label style={{...styles.label, transform: emailFocused || email ? 'translateY(-24px) scale(0.85)' : 'translateY(0)'}}>Email</label>
+            <label style={{ ...styles.label, transform: emailFocused || email ? 'translateY(-24px) scale(0.85)' : 'translateY(0)' }}>Email</label>
             <input
               type="email"
               value={email}
@@ -326,7 +315,7 @@ export default function Signup() {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={{...styles.label, transform: passwordFocused || password ? 'translateY(-24px) scale(0.85)' : 'translateY(0)'}}>Password</label>
+            <label style={{ ...styles.label, transform: passwordFocused || password ? 'translateY(-24px) scale(0.85)' : 'translateY(0)' }}>Password</label>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -354,7 +343,7 @@ export default function Signup() {
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={{...styles.label, transform: confirmFocused || confirmPassword ? 'translateY(-24px) scale(0.85)' : 'translateY(0)'}}>Confirm Password</label>
+            <label style={{ ...styles.label, transform: confirmFocused || confirmPassword ? 'translateY(-24px) scale(0.85)' : 'translateY(0)' }}>Confirm Password</label>
             <input
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
@@ -384,7 +373,7 @@ export default function Signup() {
         <div style={styles.footer}>
           <span style={styles.footerText}>
             Already have an account?
-            <a href="/login" style={styles.link}>Login</a>
+            <Link to="/login" style={styles.link}>Login</Link>
           </span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import API_BASE_URL from './config'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from './App'
+import api from './api'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -35,6 +36,7 @@ export default function Login() {
   const [emailFocused, setEmailFocused] = useState(false)
   const [passwordFocused, setPasswordFocused] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -42,30 +44,17 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.detail || 'Login failed')
-        setLoading(false)
-        return
+      const data = await api.post('/auth/login', { email, password })
+      if (data) {
+        login(data.token, { user_id: data.user_id, email: data.email })
+        navigate('/dashboard')
       }
-
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user_id', data.user_id)
-      localStorage.setItem('user_email', data.email)
-
-      navigate('/dashboard')
     } catch (err) {
-      setError('Network error. Please try again.')
+      setError(err.message || 'Login failed')
       setLoading(false)
     }
   }
+
 
   const styles = {
     container: {
@@ -256,7 +245,7 @@ export default function Login() {
           color: #818cf8 !important;
         }
       `}</style>
-      
+
       <div style={styles.authCard}>
         <div style={styles.logoSection}>
           <div style={styles.logo}>SkillMatch</div>
@@ -307,7 +296,7 @@ export default function Login() {
         <div style={styles.footer}>
           <span style={styles.footerText}>
             Don't have an account?
-            <a href="/signup" style={styles.link}>Create account</a>
+            <Link to="/signup" style={styles.link}>Create account</Link>
           </span>
         </div>
       </div>
