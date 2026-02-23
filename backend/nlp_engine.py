@@ -997,6 +997,10 @@ def extract_education_degrees(text):
     
     # Specific degree patterns - order matters (most specific first)
     degree_patterns = [
+        # Associate Degree patterns
+        (r'\b(?:associate(?:\'?s)?\s+degree|associate\s+of\s+(?:science|arts|applied\s+science))\b', 'Associate Degree', 'associate'),
+        (r'\b(?:a\.?s\.?|a\.?a\.?)\s+degree\b', 'Associate Degree', 'associate'),
+        
         # PhD patterns
         (r'\b(?:phd|ph\.d|ph\s+d|doctor\s+of\s+philosophy)\b', 'PhD', 'phd'),
         (r'\b(?:doctorate)\b', 'PhD', 'phd'),
@@ -1867,6 +1871,26 @@ def parse_jd_structured(text):
                 break
     
     required_education = extract_education_degrees(text)
+    
+    # For JDs, simplify overly specific degree names when generic requirements mentioned
+    simplified_education = []
+    generic_jd = 'related field' in text_lower or 'equivalent' in text_lower or 'any field' in text_lower
+    
+    for edu in required_education:
+        edu_lower = edu.lower()
+        
+        # Simplify to degree level for generic JD requirements
+        if generic_jd:
+            if 'bachelor' in edu_lower and ('engineering' in edu_lower or 'science' in edu_lower or 'arts' in edu_lower or 'technology' in edu_lower):
+                edu = "Bachelor's Degree"
+            elif 'master' in edu_lower and ('engineering' in edu_lower or 'science' in edu_lower or 'arts' in edu_lower or 'technology' in edu_lower):
+                edu = "Master's Degree"
+            # Keep specific degrees like MBA, PhD, Associate as is
+        
+        if edu not in simplified_education:
+            simplified_education.append(edu)
+    
+    required_education = simplified_education if simplified_education else required_education
     
     # Extract job role with improved logic
     job_role = ""
