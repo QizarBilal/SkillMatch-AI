@@ -1,20 +1,22 @@
-
 import re
 import unicodedata
+import math
+import spacy
+from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
 
+# spaCy loader globally
+try:
+    # Model needing parser (for noun chunks and sents) and ner
+    nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
+except Exception:
+    try:
+        nlp = spacy.blank("en")
+    except Exception:
+        nlp = None
 
-
-# spaCy loader with only tokenizer and NER enabled
-_spacy_model = None
 def get_spacy_model():
-    global _spacy_model
-    if _spacy_model is None:
-        import spacy
-        try:
-            _spacy_model = spacy.load("en_core_web_sm", disable=["parser", "textcat", "attribute_ruler"])
-        except Exception:
-            _spacy_model = None
-    return _spacy_model
+    return nlp
 
 
 # Static stopwords set (no NLTK)
@@ -26,10 +28,9 @@ candidate role responsibility responsibilities required must should will would i
 def get_combined_stopwords():
     return STATIC_STOPWORDS
 
+combined_stopwords = STATIC_STOPWORDS
 
-# Manual TF-IDF and cosine similarity implementation
-from collections import Counter
-import math
+
 
 def tokenize(text):
     return re.findall(r"\b\w+\b", text.lower())

@@ -1,36 +1,26 @@
-
-# Only import re globally (lightweight)
 import re
-
-
-# spaCy loader with tokenizer-only mode (NER optional fallback)
-_spacy_model = None
-def get_spacy_tokenizer():
-    global _spacy_model
-    if _spacy_model is None:
-        import spacy
-        try:
-            _spacy_model = spacy.blank("en")
-        except Exception:
-            _spacy_model = None
-    return _spacy_model
-
-# Optional: NER fallback (loads only if needed)
-_spacy_ner = None
-def get_spacy_ner():
-    global _spacy_ner
-    if _spacy_ner is None:
-        import spacy
-        try:
-            _spacy_ner = spacy.load("en_core_web_sm", disable=["tagger", "parser", "attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
-        except Exception:
-            _spacy_ner = None
-    return _spacy_ner
-
-
-# Manual TF-IDF and cosine similarity implementation
-from collections import Counter
 import math
+import spacy
+from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Load spaCy model globally for NER, POS tagging, and Noun Chunks
+try:
+    # We need parser for noun_chunks and ner for entity recognition
+    nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
+except Exception:
+    try:
+        nlp = spacy.blank("en")
+    except Exception:
+        nlp = None
+
+def get_spacy_tokenizer():
+    return nlp
+
+def get_spacy_ner():
+    return nlp
+
+
 
 def tokenize(text):
     # Simple regex tokenizer
