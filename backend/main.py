@@ -58,6 +58,20 @@ warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
 app = FastAPI()
 
+# Serve React static build
+app.mount("/static", StaticFiles(directory="../frontend/dist", html=True), name="static")
+
+# Catch-all route for frontend (after all API routes)
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/{full_path:path}")
+async def serve_react(full_path: str):
+    file_path = os.path.join("../frontend/dist", full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse(os.path.join("../frontend/dist", "index.html"))
+
 # Global state for application readiness
 app_ready = False
 

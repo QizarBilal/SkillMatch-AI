@@ -3,12 +3,10 @@ from datetime import datetime
 import os
 from urllib.parse import quote_plus
 
-MONGO_USERNAME = os.getenv("MONGO_USERNAME", "bilalqizar")
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "bilalqizar")
-MONGO_CLUSTER = os.getenv("MONGO_CLUSTER", "techportfoliohub.s3pd6uw.mongodb.net")
-MONGO_DATABASE = os.getenv("MONGO_DATABASE", "SkillMatch")
 
-MONGO_URI = f"mongodb+srv://{quote_plus(MONGO_USERNAME)}:{quote_plus(MONGO_PASSWORD)}@{MONGO_CLUSTER}/?appName=TechPortfolioHub"
+# HuggingFace Spaces: Use MONGODB_URI env variable
+MONGO_URI = os.getenv("MONGODB_URI")
+MONGO_DATABASE = os.getenv("MONGO_DATABASE", "SkillMatch")
 
 
 # Lazy MongoDB connection and collections

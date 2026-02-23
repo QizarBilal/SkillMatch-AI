@@ -5,7 +5,7 @@ from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "skillmatch_secret_key_change_in_production")
+SECRET_KEY = os.getenv("JWT_SECRET", "skillmatch_secret_key_change_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
