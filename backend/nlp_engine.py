@@ -1871,23 +1871,39 @@ def parse_jd_structured(text):
     # Extract job role with improved logic
     job_role = ""
     
-    # Pattern 1: Look for explicit job title/role/position labels
-    role_patterns = [
-        r'(?i)(?:job\s+title|position|role|designation)[:|\s]+([^\n]{10,80})',
-        r'(?i)(?:hiring\s+for|looking\s+for)[:|\s]+([^\n]{10,80})',
-        r'(?i)(?:job.*?)[:|\s]+((?:senior|junior|lead|staff|principal)?\s*[a-z]+\s+(?:engineer|developer|analyst|designer|manager|architect))',
-    ]
+    # Pattern 0: Look for role at the very beginning after "job description"
+    beginning_pattern = r'(?i)(?:job\s+description|jd|position)[:|\s]+([^.!?\n]{10,100}?)(?:\s+location|\s+job\s+type|\s+remote|\s+hybrid|\s+$|\n)'
+    beginning_match = re.search(beginning_pattern, text[:500])
+    if beginning_match:
+        candidate = beginning_match.group(1).strip()
+        # Clean up
+        candidate = re.sub(r'\s+location.*$', '', candidate, flags=re.IGNORECASE)
+        candidate = re.sub(r'\s+city.*$', '', candidate, flags=re.IGNORECASE)
+        candidate = re.sub(r'\s+state.*$', '', candidate, flags=re.IGNORECASE)
+        candidate = re.sub(r'\s+remote.*$', '', candidate, flags=re.IGNORECASE)
+        candidate = re.sub(r'\s+job\s+type.*$', '', candidate, flags=re.IGNORECASE)
+        candidate = candidate.title()  # Capitalize properly
+        if 10 <= len(candidate) <= 80:
+            job_role = candidate
     
-    for pattern in role_patterns:
-        role_match = re.search(pattern, text)
-        if role_match:
-            candidate = role_match.group(1).strip()
-            # Clean up common suffixes
-            candidate = re.sub(r'\s*[-–]\s*.*$', '', candidate)  # Remove dash and everything after
-            candidate = re.sub(r'\s+\(.*?\)', '', candidate)  # Remove parentheses
-            if 5 <= len(candidate) <= 80:
-                job_role = candidate
-                break
+    # Pattern 1: Look for explicit job title/role/position labels
+    if not job_role:
+        role_patterns = [
+            r'(?i)(?:job\s+title|position|role|designation)[:|\s]+([^\n]{10,80})',
+            r'(?i)(?:hiring\s+for|looking\s+for)[:|\s]+([^\n]{10,80})',
+            r'(?i)(?:job.*?)[:|\s]+((?:senior|junior|lead|staff|principal)?\s*[a-z]+\s+(?:engineer|developer|analyst|designer|manager|architect))',
+        ]
+        
+        for pattern in role_patterns:
+            role_match = re.search(pattern, text)
+            if role_match:
+                candidate = role_match.group(1).strip()
+                # Clean up common suffixes
+                candidate = re.sub(r'\s*[-–]\s*.*$', '', candidate)  # Remove dash and everything after
+                candidate = re.sub(r'\s+\(.*?\)', '', candidate)  # Remove parentheses
+                if 5 <= len(candidate) <= 80:
+                    job_role = candidate
+                    break
     
     # Pattern 2: Look for role-like phrases in first 15 lines
     if not job_role:
