@@ -16,32 +16,50 @@ def get_spacy_model():
             _spacy_model = None
     return _spacy_model
 
-# NLTK stopwords loader (import inside function)
-def get_nltk_stop_set():
-    try:
-        import nltk
-        from nltk.corpus import stopwords as nltk_stopwords
-        return set(nltk_stopwords.words('english'))
-    except Exception:
-        try:
-            import nltk
-            nltk.download('stopwords', quiet=True)
-            from nltk.corpus import stopwords as nltk_stopwords
-            return set(nltk_stopwords.words('english'))
-        except Exception:
-            return set()
 
-def get_spacy_stop_set():
-    nlp = get_spacy_model()
-    return nlp.Defaults.stop_words if nlp else set()
+# Static stopwords set (no NLTK)
+STATIC_STOPWORDS = set('''
+a about above after again against all am an and any are as at be because been before being below between both but by could did do does doing down during each few for from further had has have having he her here hers herself him himself his how i if in into is it its itself just me more most my myself no nor not of off on once only or other our ours ourselves out over own same she should so some such than that the their theirs them themselves then there these they this those through to too under until up very was we were what when where which while who whom why will with you your yours yourself yourselves
+candidate role responsibility responsibilities required must should will would include includes including looking seeking ideal position work team environment company organization business strong excellent good great ability experience years year level senior junior prefer preferred bonus nice work working company join organization offer summary culture benefits salary competitive package grew growth opportunity opportunities hiring hire apply application
+'''.split())
 
 def get_combined_stopwords():
-    return get_nltk_stop_set() | get_spacy_stop_set()
+    return STATIC_STOPWORDS
 
-# TF-IDF vectorizer: always create new instance per request, never global
-def get_tfidf_vectorizer(max_features=100, ngram_range=(1, 4), min_df=1):
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    return TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, min_df=min_df)
+
+# Manual TF-IDF and cosine similarity implementation
+from collections import Counter
+import math
+
+def tokenize(text):
+    return re.findall(r"\b\w+\b", text.lower())
+
+def compute_tf(text):
+    tokens = tokenize(text)
+    tf = Counter(tokens)
+    total = sum(tf.values())
+    return {k: v / total for k, v in tf.items()} if total else {}
+
+def compute_idf(texts):
+    N = len(texts)
+    df = Counter()
+    for text in texts:
+        tokens = set(tokenize(text))
+        df.update(tokens)
+    return {k: math.log((N + 1) / (df[k] + 1)) + 1 for k in df}
+
+def compute_tfidf(text, idf):
+    tf = compute_tf(text)
+    return {k: tf[k] * idf.get(k, 0) for k in tf}
+
+def cosine_similarity_sparse(vec1, vec2):
+    common = set(vec1) & set(vec2)
+    dot = sum(vec1[k] * vec2[k] for k in common)
+    norm1 = math.sqrt(sum(v * v for v in vec1.values()))
+    norm2 = math.sqrt(sum(v * v for v in vec2.values()))
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return dot / (norm1 * norm2)
 
 python_skills = {
     "python", "java", "javascript", "typescript", "c++", "c#", "csharp", "go", "golang",

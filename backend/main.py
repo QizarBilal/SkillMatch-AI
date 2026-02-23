@@ -5,8 +5,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 import pdfplumber
 import docx
-import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter
+
+def set_pytesseract_path():
+    import pytesseract
+    import platform
+    if platform.system() == 'Windows':
+        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 import uuid
 import json
 import io
@@ -48,8 +53,8 @@ import platform
 import asyncio
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
-if platform.system() == 'Windows':
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+    set_pytesseract_path()
 
 
 app = FastAPI()
@@ -420,6 +425,10 @@ async def analyze(
             from backend.main import read_docx
             return read_docx(file)
         else:
+            # Import OCR only for images
+            from PIL import Image
+            import pytesseract
+            set_pytesseract_path()
             from backend.main import read_image
             return read_image(file)
 
@@ -495,17 +504,18 @@ async def analyze(
     del _nlp_cache["extract_keywords_hybrid"]
     gc.collect()
 
-    # Stage 9: TF-IDF Vectorization (memory safe)
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    vectorizer = TfidfVectorizer(max_features=100, ngram_range=(1, 4), min_df=1)
-    tfidf_matrix = vectorizer.fit_transform([raw, jd_text])
-    feature_names = vectorizer.get_feature_names_out()
+    # Stage 9: Manual TF-IDF Vectorization (memory safe)
+    from backend.nlp_preprocessing import compute_idf, compute_tfidf, cosine_similarity_sparse, tokenize
+    idf = compute_idf([raw, jd_text])
+    resume_tfidf = compute_tfidf(raw, idf)
+    jd_tfidf = compute_tfidf(jd_text, idf)
+    feature_names = list(idf.keys())
     tfidf_data = {
-        'resume_tfidf_vector': tfidf_matrix.toarray()[0],
-        'jd_tfidf_vector': tfidf_matrix.toarray()[1],
+        'resume_tfidf_vector': [resume_tfidf.get(f, 0.0) for f in feature_names],
+        'jd_tfidf_vector': [jd_tfidf.get(f, 0.0) for f in feature_names],
         'feature_names': feature_names
     }
-    del vectorizer, tfidf_matrix, feature_names
+    del idf, resume_tfidf, jd_tfidf, feature_names
     gc.collect()
 
     rid = str(uuid.uuid4())[:8]
