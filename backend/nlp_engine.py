@@ -1895,20 +1895,39 @@ def parse_jd_structured(text):
     # Extract job role with improved logic
     job_role = ""
     
+    # Pattern -1: Check if text starts directly with a role (before "job summary", "entry level", etc.)
+    first_line_pattern = r'^([^.\n]{10,100}?)(?:\s+(?:entry\s+level|job\s+summary|location|remote|hybrid|description))'
+    first_match = re.search(first_line_pattern, text[:300], re.IGNORECASE)
+    if first_match:
+        candidate = first_match.group(1).strip()
+        role_indicators = ['technician', 'specialist', 'engineer', 'developer', 'analyst', 'manager', 
+                          'designer', 'architect', 'scientist', 'consultant', 'lead', 'trainee', 'intern', 'coordinator']
+        # Check if candidate contains role indicator
+        if any(indicator in candidate.lower() for indicator in role_indicators):
+            # Clean up
+            candidate = re.sub(r'\s+entry\s+level.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+location.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+job\s+summary.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = candidate.title()
+            if 10 <= len(candidate) <= 100:
+                job_role = candidate
+    
     # Pattern 0: Look for role at the very beginning after "job description"
-    beginning_pattern = r'(?i)(?:job\s+description|jd|position)[:|\s]+([^.!?\n]{10,100}?)(?:\s+location|\s+job\s+type|\s+remote|\s+hybrid|\s+$|\n)'
-    beginning_match = re.search(beginning_pattern, text[:500])
-    if beginning_match:
-        candidate = beginning_match.group(1).strip()
-        # Clean up
-        candidate = re.sub(r'\s+location.*$', '', candidate, flags=re.IGNORECASE)
-        candidate = re.sub(r'\s+city.*$', '', candidate, flags=re.IGNORECASE)
-        candidate = re.sub(r'\s+state.*$', '', candidate, flags=re.IGNORECASE)
-        candidate = re.sub(r'\s+remote.*$', '', candidate, flags=re.IGNORECASE)
-        candidate = re.sub(r'\s+job\s+type.*$', '', candidate, flags=re.IGNORECASE)
-        candidate = candidate.title()  # Capitalize properly
-        if 10 <= len(candidate) <= 80:
-            job_role = candidate
+    if not job_role:
+        beginning_pattern = r'(?i)(?:job\s+description|jd|position)[:|\s]+([^.!?\n]{10,120}?)(?:\s+(?:location|job\s+type|remote|hybrid|entry\s+level)|\s*$|\n)'
+        beginning_match = re.search(beginning_pattern, text[:500])
+        if beginning_match:
+            candidate = beginning_match.group(1).strip()
+            # Clean up
+            candidate = re.sub(r'\s+location.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+city.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+state.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+remote.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+job\s+type.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = re.sub(r'\s+entry\s+level.*$', '', candidate, flags=re.IGNORECASE)
+            candidate = candidate.title()  # Capitalize properly
+            if 10 <= len(candidate) <= 100:
+                job_role = candidate
     
     # Pattern 1: Look for explicit job title/role/position labels
     if not job_role:
