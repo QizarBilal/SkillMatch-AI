@@ -976,9 +976,9 @@ def extract_name(text):
         if 1 <= len(words) <= 5 and len(line_clean) < 50:
             # Exclude if it has email, phone, URL patterns, or is all lowercase (likely not a name)
             if not re.search(r'@|http|www|\d{10}|\d{3}-\d{3}', line_clean):
-                # Exclude obvious job titles (but only if they're alone on a line)
-                job_title_alone = any(indicator == line_clean.lower() for indicator in job_title_indicators)
-                if not job_title_alone:
+                # Exclude lines containing job title keywords
+                has_job_title = any(indicator in line_clean.lower() for indicator in job_title_indicators)
+                if not has_job_title:
                     # If it's mostly uppercase or title case, likely a name
                     if line_clean[0].isupper() or line_clean.isupper():
                         return line_clean
