@@ -2,17 +2,30 @@
 # Only import re globally (lightweight)
 import re
 
-# spaCy loader with only tokenizer and NER enabled
+
+# spaCy loader with tokenizer-only mode (NER optional fallback)
 _spacy_model = None
-def get_spacy_model():
+def get_spacy_tokenizer():
     global _spacy_model
     if _spacy_model is None:
         import spacy
         try:
-            _spacy_model = spacy.load("en_core_web_sm", disable=["parser", "textcat", "attribute_ruler"])
+            _spacy_model = spacy.blank("en")
         except Exception:
             _spacy_model = None
     return _spacy_model
+
+# Optional: NER fallback (loads only if needed)
+_spacy_ner = None
+def get_spacy_ner():
+    global _spacy_ner
+    if _spacy_ner is None:
+        import spacy
+        try:
+            _spacy_ner = spacy.load("en_core_web_sm", disable=["tagger", "parser", "attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
+        except Exception:
+            _spacy_ner = None
+    return _spacy_ner
 
 
 # Manual TF-IDF and cosine similarity implementation
