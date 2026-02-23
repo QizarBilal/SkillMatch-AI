@@ -58,19 +58,8 @@ warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality")
 
 app = FastAPI()
 
-# Serve React static build from correct path for Docker/Spaces
-from pathlib import Path
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+# Static file serving is handled at the bottom of the file to prevent catching API routes
 
-# Catch-all route for frontend (after all API routes)
-from fastapi.responses import FileResponse
-@app.get("/{full_path:path}")
-async def serve_react(full_path: str):
-    file_path = FRONTEND_DIR / full_path
-    if file_path.exists() and file_path.is_file():
-        return FileResponse(str(file_path))
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 # Global state for application readiness
 app_ready = False
