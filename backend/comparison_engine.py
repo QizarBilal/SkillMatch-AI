@@ -314,8 +314,7 @@ def compare_profiles(resume_profile, job_profile):
     missing = jd_core_required - resume_core_skills
     additional = resume_core_skills - jd_core_required
     
-    skill_match_ratio = len(matched) / len(jd_core_required) if len(jd_core_required) > 0 else 0.0
-    final_score = round(skill_match_ratio * 100, 2)
+    skill_match_ratio = len(matched) / len(jd_core_required) if len(jd_core_required) > 0 else 1.0
     
     matched_by_category = {}
     missing_by_category = {}
@@ -363,6 +362,19 @@ def compare_profiles(resume_profile, job_profile):
             education_match = any('bachelor' in deg.lower() or 'bsc' in deg.lower() or 'btech' in deg.lower() or 'master' in deg.lower() or 'phd' in deg.lower() for deg in resume_degrees)
         elif 'master' in ' '.join(jd_education).lower():
             education_match = any('master' in deg.lower() or 'phd' in deg.lower() for deg in resume_degrees)
+    
+    # Calculate component scores for weighted scoring
+    skill_score = skill_match_ratio * 100
+    education_score = 100 if education_match else 0
+    experience_score = max(0, 100 - (experience_gap_years * 10)) if experience_gap_years > 0 else 100
+    
+    # Apply weighted scoring based on whether skills are required
+    if len(jd_core_required) > 0:
+        # Skills are required: Skills 60%, Education 20%, Experience 20%
+        final_score = round((skill_score * 0.6) + (education_score * 0.2) + (experience_score * 0.2), 2)
+    else:
+        # No skills required: Education 50%, Experience 50%
+        final_score = round((education_score * 0.5) + (experience_score * 0.5), 2)
     
     if final_score >= 80:
         if experience_gap:
