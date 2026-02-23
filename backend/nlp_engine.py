@@ -76,7 +76,7 @@ typed_technical_ontology = {
         "predictive modeling", "data mining"
     },
     "ai_method": {
-        "artificial intelligence", "ai", "ml", "dl", "nlp", "natural language processing", 
+        "artificial intelligence", "machine learning", "deep learning", "nlp", "natural language processing", 
         "computer vision", "cv"
     },
     "web_standard": {
@@ -157,7 +157,7 @@ normalization_map = {
     "k8s": "kubernetes",
     "html5": "html",
     "css3": "css",
-    "ml": "machine learning", "ai": "artificial intelligence", "dl": "deep learning",
+    "ml": "machine learning", "dl": "deep learning",
     "nlp": "natural language processing", "cv": "computer vision",
     "sklearn": "scikit learn", "tf": "tensorflow",
     "py": "python", "js": "javascript", "ts": "typescript",
