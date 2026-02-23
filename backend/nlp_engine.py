@@ -966,6 +966,24 @@ def extract_location(text):
 def extract_name(text):
     header_text = text[:500]
     
+    # Try first line first - often the name is on the very first line
+    lines = header_text.split('\n')
+    for idx, line in enumerate(lines[:5]):
+        line_clean = line.strip()
+        words = line_clean.split()
+        
+        # First line with 2-5 words and no special characters is likely the name
+        if 1 <= len(words) <= 5 and len(line_clean) < 50:
+            # Exclude if it has email, phone, URL patterns, or is all lowercase (likely not a name)
+            if not re.search(r'@|http|www|\d{10}|\d{3}-\d{3}', line_clean):
+                # Exclude obvious job titles (but only if they're alone on a line)
+                job_title_alone = any(indicator == line_clean.lower() for indicator in job_title_indicators)
+                if not job_title_alone:
+                    # If it's mostly uppercase or title case, likely a name
+                    if line_clean[0].isupper() or line_clean.isupper():
+                        return line_clean
+    
+    # Fallback to NLP entity recognition
     if nlp:
         doc = nlp(header_text)
         for ent in doc.ents:
@@ -976,13 +994,6 @@ def extract_name(text):
                     has_summary_words = any(word in ent.text.lower() for word in ['summary', 'profile', 'passionate', 'enthusiastic'])
                     if not is_job_title and not has_summary_words:
                         return ent.text
-    
-    lines = header_text.split('\n')
-    for line in lines[:3]:
-        line_clean = line.strip()
-        if 2 <= len(line_clean.split()) <= 5 and len(line_clean) < 50:
-            if not re.search(r'@|http|www|\d{3}|engineer|developer|designer|analyst', line_clean.lower()):
-                return line_clean
     
     return ""
 
@@ -1225,22 +1236,50 @@ def extract_experience_duration(text):
     return durations[:5]
 
 def estimate_experience_years(text):
+    # First try to find explicit year mentions
     year_pattern = r'(\d+)\s*\+?\s*(?:years?|yrs?)'
     years_found = re.findall(year_pattern, text.lower())
     
     if years_found:
         return str(max([int(y) for y in years_found]))
     
-    date_ranges = re.findall(r'\b(\d{4})\s*-\s*(\d{4}|present|current)\b', text.lower())
-    if date_ranges:
-        total_years = 0
-        for start, end in date_ranges:
-            start_year = int(start)
-            end_year = 2026 if end in ['present', 'current'] else int(end)
-            total_years += max(0, end_year - start_year)
-        return str(total_years) if total_years > 0 else ""
+    # Extract only work experience section to avoid counting education years
+    experience_section_match = re.search(
+        r'(?i)(professional\s*experience|work\s*experience|experience|employment|work\s*history).*?(?=\n\s*(?:education|skills|projects|certifications|technical\s*skills|summary)|\Z)',
+        text,
+        re.DOTALL
+    )
     
-    return ""
+    if experience_section_match:
+        experience_text = experience_section_match.group()
+        
+        # Find date ranges only in the experience section
+        date_ranges = re.findall(r'\b(\d{4})\s*-\s*(\d{4}|present|current)\b', experience_text.lower())
+        if date_ranges:
+            total_years = 0
+            for start, end in date_ranges:
+                start_year = int(start)
+                end_year = 2026 if end in ['present', 'current'] else int(end)
+                years = max(0, end_year - start_year)
+                # Only count reasonable work durations (not 3+ year gaps which might be education)
+                if years <= 10:  # Single job unlikely to be more than 10 years for a resume
+                    total_years += years
+            return str(total_years) if total_years > 0 else "0"
+        else:
+            # Check for month-year ranges (e.g., "May 2024" or "Nov 2024")
+            month_year_ranges = re.findall(
+                r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})\b',
+                experience_text.lower()
+            )
+            if month_year_ranges:
+                # If we only have month-year format (internships), calculate from earliest to now
+                years = [int(y) for y in month_year_ranges]
+                earliest_year = min(years)
+                latest_year = max(years)
+                total = latest_year - earliest_year
+                return str(total) if total > 0 else "0"
+    
+    return "0"
 
 def extract_projects(text):
     project_indicators = ['project', 'projects']
