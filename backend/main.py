@@ -1,4 +1,5 @@
-from fastapi import FastAPI, UploadFile, Form, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException, Depends
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -413,25 +414,22 @@ _nlp_cache = {}
 
 @app.post("/analyze")
 async def analyze(
-    resume: UploadFile, 
-    job_description: str = Form(None), 
-    jd_file: UploadFile = None,
+    resume: UploadFile = File(...), 
+    job_description: Optional[str] = Form(None), 
+    jd_file: Optional[UploadFile] = File(None),
     user_id: int = Depends(verify_token)
 ):
     # Stage 1: Text Extraction
     def extract_text(file, ext):
         if ext == "pdf":
-            from backend.main import read_pdf
             return read_pdf(file)
         elif ext == "docx":
-            from backend.main import read_docx
             return read_docx(file)
         else:
             # Import OCR only for images
             from PIL import Image
             import pytesseract
             set_pytesseract_path()
-            from backend.main import read_image
             return read_image(file)
 
     ext = resume.filename.split(".")[-1].lower()
