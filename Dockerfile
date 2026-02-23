@@ -9,28 +9,33 @@ RUN npm run build
 FROM python:3.11-slim AS backend-builder
 WORKDIR /app
 
-# Only install build tools in builder stage
-RUN apt-get update && apt-get install -y \
+
+# Only install build tools in builder stage, then remove them
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     poppler-utils \
     gcc \
     g++ \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apt-get purge -y gcc g++ \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
+COPY backend/requirements.txt .
 RUN python -m spacy download en_core_web_sm
 
 
 FROM python:3.11-slim
 WORKDIR /app
 
+
 # Only install runtime system packages in final image
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     poppler-utils \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
