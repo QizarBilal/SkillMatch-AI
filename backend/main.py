@@ -74,12 +74,8 @@ app = FastAPI()
 # Global state for application readiness
 app_ready = False
 
-# Lightweight health endpoint at root
-@app.get("/")
-def root_health():
-    return {"status": "ok"}
-
 @app.on_event("startup")
+
 async def startup_event():
     global app_ready
     # Run DB test asynchronously without blocking startup
