@@ -4,6 +4,8 @@ import Login from './Login'
 import Signup from './Signup'
 import Dashboard from './Dashboard'
 import Admin from './Admin'
+import VerifyOTP from './VerifyOTP'
+import PremiumLoader from './PremiumLoader'
 
 const AuthContext = createContext(null)
 
@@ -11,7 +13,16 @@ export const useAuth = () => useContext(AuthContext)
 
 function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [initialLoading, setInitialLoading] = useState(true)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false)
+    }, 3500)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const handleAuthError = () => {
@@ -36,6 +47,10 @@ function AuthProvider({ children }) {
     localStorage.removeItem('skillmatch_result')
     setToken(null)
     navigate('/login')
+  }
+
+  if (initialLoading) {
+    return <PremiumLoader />
   }
 
   return (
@@ -66,6 +81,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
           <Route path="/signup" element={<ProtectedRoute requireAuth={false}><Signup /></ProtectedRoute>} />
+          <Route path="/verify-otp" element={<ProtectedRoute requireAuth={false}><VerifyOTP /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

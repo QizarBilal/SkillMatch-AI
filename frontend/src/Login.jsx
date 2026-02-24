@@ -162,13 +162,14 @@ export default function Login() {
       cursor: 'pointer',
       fontSize: isMobile ? '20px' : '22px',
       padding: isMobile ? '6px' : '8px',
-      transition: 'color 0.2s',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
       width: isMobile ? '36px' : '40px',
       height: isMobile ? '36px' : '40px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       lineHeight: '1',
+      borderRadius: '50%',
     },
     error: {
       background: 'rgba(239, 68, 68, 0.1)',
@@ -234,12 +235,24 @@ export default function Login() {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        button:hover {
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .submit-btn:hover {
           transform: translateY(-2px) !important;
           box-shadow: 0 6px 30px rgba(99, 102, 241, 0.5) !important;
         }
-        button:active {
+        .submit-btn:active {
           transform: translateY(0) !important;
+        }
+        .icon-btn:hover {
+          transform: translateY(-50%) scale(1.1) !important;
+          color: #818cf8 !important;
+          background: rgba(99, 102, 241, 0.1) !important;
+        }
+        .icon-btn:active {
+          transform: translateY(-50%) scale(0.95) !important;
         }
         a:hover {
           color: #818cf8 !important;
@@ -281,6 +294,7 @@ export default function Login() {
             />
             <button
               type="button"
+              className="icon-btn"
               onClick={() => setShowPassword(!showPassword)}
               style={styles.togglePassword}
             >
@@ -288,7 +302,7 @@ export default function Login() {
             </button>
           </div>
 
-          <button type="submit" disabled={loading} style={styles.button}>
+          <button type="submit" disabled={loading} className="submit-btn" style={styles.button}>
             {loading ? <span style={styles.spinner}></span> : 'Login'}
           </button>
         </form>

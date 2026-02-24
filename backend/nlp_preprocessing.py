@@ -1,19 +1,22 @@
 import re
 import unicodedata
 import math
-import spacy
 from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-# spaCy loader globally
 try:
-    # Model needing parser (for noun chunks and sents) and ner
-    nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
-except Exception:
+    import spacy
+    # spaCy loader globally
     try:
-        nlp = spacy.blank("en")
+        # Model needing parser (for noun chunks and sents) and ner
+        nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
     except Exception:
-        nlp = None
+        try:
+            nlp = spacy.blank("en")
+        except Exception:
+            nlp = None
+except Exception:
+    spacy = None
+    nlp = None
 
 def get_spacy_model():
     return nlp

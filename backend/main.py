@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException, Depends, BackgroundTasks
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -22,7 +22,11 @@ import gc
 import platform
 import asyncio
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import secrets
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import pytesseract
 try:
@@ -40,7 +44,7 @@ from .admin import (
     get_skill_category_distribution, get_recommendation_distribution,
     get_recent_analyses, validate_admin_role
 )
-from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection, quick_health_check
+from .mongodb import users_collection, submissions_collection, resumes_collection, job_descriptions_collection, analysis_results_collection, test_connection, quick_health_check, otp_collection
 
 # Database collection getters are imported from .mongodb
 
@@ -93,9 +97,121 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResendOTPRequest(BaseModel):
+    email: EmailStr
+
+def send_otp_email(to_email: str, otp: str):
+    try:
+        host = os.getenv("SMTP_HOST")
+        port = int(os.getenv("SMTP_PORT", 587))
+        user = os.getenv("SMTP_USER")
+        password = os.getenv("SMTP_PASS")
+        from_email = os.getenv("EMAIL_FROM", user)
+
+        if not all([host, user, password]):
+            print("SMTP credentials missing, skipping OTP email.")
+            return
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "SkillMatch - Verify your email (OTP)"
+        msg["From"] = from_email
+        msg["To"] = to_email
+
+        text = f"Your SkillMatch verification code is: {otp}\nThis code will expire in 5 minutes."
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #0f1629; color: #f8fafc; margin: 0; padding: 40px 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); padding: 40px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h1 style="color: #8b5cf6; font-size: 28px; margin: 0; letter-spacing: -0.5px; font-weight: 700;">SkillMatch</h1>
+                    <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">AI Resume Intelligence Platform</p>
+                </div>
+                <h2 style="color: #e2e8f0; font-size: 20px; font-weight: 600; text-align: center;">Verify your email address</h2>
+                <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6; text-align: center; margin-top: 24px;">
+                    To complete your registration, please enter the following 6-digit verification code. This code will expire in <strong>5 minutes</strong>.
+                </p>
+                <div style="background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.5); border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0;">
+                    <span style="font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #818cf8;">{otp}</span>
+                </div>
+                <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 32px; border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 24px;">
+                    If you didn't request this code, you can safely ignore this email.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+
+        part1 = MIMEText(text, "plain")
+        part2 = MIMEText(html, "html")
+        msg.attach(part1)
+        msg.attach(part2)
+
+        with smtplib.SMTP(host, port) as server:
+            server.starttls()
+            server.login(user, password)
+            server.sendmail(from_email, to_email, msg.as_string())
+    except Exception as e:
+        print(f"Failed to send OTP email: {e}")
+
+def send_welcome_email(to_email: str, user_name: str):
+    try:
+        host = os.getenv("SMTP_HOST")
+        port = int(os.getenv("SMTP_PORT", 587))
+        user = os.getenv("SMTP_USER")
+        password = os.getenv("SMTP_PASS")
+        from_email = os.getenv("EMAIL_FROM", user)
+
+        if not all([host, user, password]):
+            print("SMTP credentials missing, skipping Welcome email.")
+            return
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Welcome to SkillMatch!"
+        msg["From"] = from_email
+        msg["To"] = to_email
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #0f1629; color: #f8fafc; margin: 0; padding: 40px 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); padding: 40px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h1 style="color: #8b5cf6; font-size: 28px; margin: 0; letter-spacing: -0.5px; font-weight: 700;">SkillMatch</h1>
+                    <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">AI Resume Intelligence Platform</p>
+                </div>
+                <h2 style="color: #e2e8f0; font-size: 22px; font-weight: 600; margin-bottom: 24px;">Welcome aboard, {user_name}! 🚀</h2>
+                <div style="color: #cbd5e1; font-size: 16px; line-height: 1.7;">
+                    <p style="margin-bottom: 16px;">We're thrilled to have you join our cutting-edge AI ecosystem.</p>
+                    <p style="margin-bottom: 16px;">SkillMatch's advanced NLP engine is now fully at your disposal. We're here to deeply analyze your resumes, extract core technical competencies, and powerfully benchmark them against any job description.</p>
+                    <p>No more guessing—just clear, actionable intelligence bridging the gap between talent and opportunity.</p>
+                </div>
+                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                    <a href="https://huggingface.co/spaces/qizarbilal/skillmatch-ai/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; display: inline-block; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);">Access Your Dashboard</a>
+                </div>
+                <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 40px; border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 24px;">
+                    Ready to elevate your career? Let's get started.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        part = MIMEText(html, "html")
+        msg.attach(part)
+
+        with smtplib.SMTP(host, port) as server:
+            server.starttls()
+            server.login(user, password)
+            server.sendmail(from_email, to_email, msg.as_string())
+    except Exception as e:
+        print(f"Failed to send welcome email: {e}")
 
 @app.post("/auth/register")
-def register(req: RegisterRequest):
+def register(req: RegisterRequest, background_tasks: BackgroundTasks):
     try:
         existing = users_collection().find_one({"email": req.email})
         if existing:
@@ -106,24 +222,26 @@ def register(req: RegisterRequest):
         
         hashed = hash_password(req.password)
         
-        user_count = users_collection().count_documents({})
-        user_id = user_count + 1
+        # Generate 6-digit OTP
+        otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
         
-        user_doc = {
-            "user_id": user_id,
+        # Upsert OTP record
+        otp_doc = {
             "email": req.email,
-            "password_hash": hashed,
-            "created_at": datetime.utcnow()
+            "otp": otp_code,
+            "expiry": datetime.utcnow() + timedelta(minutes=5),
+            "verified": False,
+            "password_hash": hashed
         }
-        users_collection().insert_one(user_doc)
+        otp_collection().update_one(
+            {"email": req.email},
+            {"$set": otp_doc},
+            upsert=True
+        )
         
-        token = create_access_token({"user_id": user_id, "email": req.email})
+        background_tasks.add_task(send_otp_email, req.email, otp_code)
         
-        return {
-            "user_id": user_id,
-            "email": req.email,
-            "token": token
-        }
+        return {"message": "OTP sent to email", "email": req.email, "requires_otp": True}
     except pymongo.errors.OperationFailure as e:
         print(f"Registration OperationFailure: {e}")
         raise HTTPException(
@@ -133,6 +251,87 @@ def register(req: RegisterRequest):
     except pymongo.errors.PyMongoError as e:
         print(f"Registration PyMongoError: {e}")
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
+
+@app.post("/auth/verify-otp")
+def verify_otp(req: VerifyOTPRequest, background_tasks: BackgroundTasks):
+    try:
+        otp_record = otp_collection().find_one({"email": req.email})
+        
+        if not otp_record:
+            raise HTTPException(status_code=400, detail="No pending registration found for this email")
+            
+        if otp_record["verified"]:
+            raise HTTPException(status_code=400, detail="User is already verified")
+            
+        if datetime.utcnow() > otp_record["expiry"]:
+            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+            
+        if otp_record["otp"] != req.otp:
+            raise HTTPException(status_code=400, detail="Invalid OTP")
+            
+        # OTP is valid, mark as verified and create user
+        otp_collection().update_one({"email": req.email}, {"$set": {"verified": True}})
+        
+        # Check if user somehow was created
+        existing = users_collection().find_one({"email": req.email})
+        if existing:
+            raise HTTPException(status_code=400, detail="User already exists")
+            
+        user_count = users_collection().count_documents({})
+        user_id = user_count + 1
+        
+        user_doc = {
+            "user_id": user_id,
+            "email": req.email,
+            "password_hash": otp_record["password_hash"],
+            "created_at": datetime.utcnow()
+        }
+        users_collection().insert_one(user_doc)
+        
+        # Clean up OTP record
+        otp_collection().delete_one({"email": req.email})
+        
+        # Generate token
+        token = create_access_token({"user_id": user_id, "email": req.email})
+        
+        # Get username prefix from email for welcome
+        user_name = req.email.split("@")[0].capitalize()
+        background_tasks.add_task(send_welcome_email, req.email, user_name)
+        
+        return {
+            "user_id": user_id,
+            "email": req.email,
+            "token": token
+        }
+    except pymongo.errors.PyMongoError as e:
+        raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
+
+@app.post("/auth/resend-otp")
+def resend_otp(req: ResendOTPRequest, background_tasks: BackgroundTasks):
+    try:
+        otp_record = otp_collection().find_one({"email": req.email})
+        if not otp_record:
+            raise HTTPException(status_code=400, detail="No pending signup found")
+            
+        # Optional basic rate-limiting (only resend if within 4 mins to expiry, or just 1 min has passed)
+        if otp_record["expiry"] > datetime.utcnow() + timedelta(minutes=4):
+            raise HTTPException(status_code=429, detail="Please wait a minute before requesting a new OTP")
+            
+        otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+        
+        otp_collection().update_one(
+            {"email": req.email},
+            {"$set": {
+                "otp": otp_code,
+                "expiry": datetime.utcnow() + timedelta(minutes=5)
+            }}
+        )
+        
+        background_tasks.add_task(send_otp_email, req.email, otp_code)
+        
+        return {"message": "OTP resent"}
+    except pymongo.errors.PyMongoError as e:
+        raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
 
 
 @app.post("/auth/login")

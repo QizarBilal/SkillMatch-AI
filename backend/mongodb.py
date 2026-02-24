@@ -8,7 +8,14 @@ from urllib.parse import quote_plus
 MONGO_URI = os.getenv("MONGODB_URI")
 MONGO_DATABASE = os.getenv("MONGO_DATABASE", "SkillMatch")
 
-
+if not MONGO_URI:
+    username = os.getenv("MONGO_USERNAME")
+    password = os.getenv("MONGO_PASSWORD")
+    cluster = os.getenv("MONGO_CLUSTER")
+    if username and password and cluster:
+        MONGO_URI = f"mongodb+srv://{quote_plus(username)}:{quote_plus(password)}@{cluster}/?retryWrites=true&w=majority"
+    else:
+        MONGO_URI = "mongodb://localhost:27017"
 # Lazy MongoDB connection and collections
 _mongo_client = None
 _mongo_db = None
@@ -65,6 +72,9 @@ def job_descriptions_collection():
 def analysis_results_collection():
     return get_collection("analysis_results")
 
+def otp_collection():
+    return get_collection("otps")
+
 def init_indexes():
     users_collection().create_index("email", unique=True)
     users_collection().create_index("user_id", unique=True)
@@ -73,3 +83,4 @@ def init_indexes():
     resumes_collection().create_index("resume_id")
     job_descriptions_collection().create_index("jd_id")
     analysis_results_collection().create_index("analysis_id")
+    otp_collection().create_index("email")

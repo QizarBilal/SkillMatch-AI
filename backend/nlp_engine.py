@@ -1,18 +1,21 @@
 import re
 import math
-import spacy
 from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-# Load spaCy model globally for NER, POS tagging, and Noun Chunks
 try:
-    # We need parser for noun_chunks and ner for entity recognition
-    nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
-except Exception:
+    import spacy
+    # Load spaCy model globally for NER, POS tagging, and Noun Chunks
     try:
-        nlp = spacy.blank("en")
+        # We need parser for noun_chunks and ner for entity recognition
+        nlp = spacy.load("en_core_web_sm", disable=["attribute_ruler", "lemmatizer", "morphologizer", "textcat"])
     except Exception:
-        nlp = None
+        try:
+            nlp = spacy.blank("en")
+        except Exception:
+            nlp = None
+except Exception:
+    spacy = None
+    nlp = None
 
 def get_spacy_tokenizer():
     return nlp
