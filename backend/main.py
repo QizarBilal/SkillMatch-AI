@@ -124,21 +124,20 @@ def send_otp_email(to_email: str, otp: str):
     html = f"""
     <!DOCTYPE html>
     <html>
-    <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #0f1629; color: #f8fafc; margin: 0; padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); padding: 40px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-            <div style="text-align: center; margin-bottom: 32px;">
-                <h1 style="color: #8b5cf6; font-size: 28px; margin: 0; letter-spacing: -0.5px; font-weight: 700;">SkillMatch</h1>
-                <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">AI Resume Intelligence Platform</p>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; color: #18181b; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; border: 1px solid #e4e4e7; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #6366f1; font-size: 24px; margin: 0; font-weight: 700; letter-spacing: -0.5px;">SkillMatch</h1>
             </div>
-            <h2 style="color: #e2e8f0; font-size: 20px; font-weight: 600; text-align: center;">Verify your email address</h2>
-            <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6; text-align: center; margin-top: 24px;">
-                To complete your registration, please enter the following 6-digit verification code. This code will expire in <strong>5 minutes</strong>.
+            <h2 style="font-size: 18px; font-weight: 600; text-align: center; color: #0f172a; margin-bottom: 20px;">Verify your identity</h2>
+            <p style="font-size: 15px; line-height: 1.6; text-align: center; color: #475569; margin-bottom: 30px;">
+                Please enter the following verification code to complete your registration. This code is valid for <strong>5 minutes</strong>.
             </p>
-            <div style="background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.5); border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0;">
-                <span style="font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #818cf8;">{otp}</span>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;">
+                <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #334155;">{otp}</span>
             </div>
-            <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 32px; border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 24px;">
-                If you didn't request this code, you can safely ignore this email.
+            <p style="font-size: 13px; text-align: center; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                If you did not request this email, please ignore it or contact support if you have concerns.
             </p>
         </div>
     </body>
@@ -250,11 +249,7 @@ def register(req: RegisterRequest, background_tasks: BackgroundTasks):
             "password_hash": hashed
         }
         
-        # Output directly to backend logs since HF blocks SMTP
-        print(f"=================================================")
-        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
-        print(f"🔑 OTP for {req.email}: {otp_code}")
-        print(f"=================================================")
+
         
         otp_collection().update_one(
             {"email": req.email},
@@ -350,11 +345,7 @@ def resend_otp(req: ResendOTPRequest, background_tasks: BackgroundTasks):
             }}
         )
         
-        # Output directly to backend logs since HF blocks SMTP
-        print(f"=================================================")
-        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
-        print(f"🔑 RESENT OTP for {req.email}: {otp_code}")
-        print(f"=================================================")
+
         
         background_tasks.add_task(send_otp_email, req.email, otp_code)
         
