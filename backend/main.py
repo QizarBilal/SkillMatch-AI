@@ -151,12 +151,19 @@ def send_otp_email(to_email: str, otp: str):
         msg.attach(part1)
         msg.attach(part2)
 
-        with smtplib.SMTP(host, port, timeout=10) as server:
-            server.set_debuglevel(1)
-            server.starttls()
-            server.login(user, password)
-            server.sendmail(from_email, to_email, msg.as_string())
-            print(f"Successfully sent OTP email to {to_email}")
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10) as server:
+                server.set_debuglevel(1)
+                server.login(user, password)
+                server.sendmail(from_email, to_email, msg.as_string())
+                print(f"Successfully sent OTP email to {to_email} (SSL)")
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as server:
+                server.set_debuglevel(1)
+                server.starttls()
+                server.login(user, password)
+                server.sendmail(from_email, to_email, msg.as_string())
+                print(f"Successfully sent OTP email to {to_email} (STARTTLS)")
     except Exception as e:
         print(f"Failed to send OTP email: {e}")
 
@@ -205,12 +212,19 @@ def send_welcome_email(to_email: str, user_name: str):
         part = MIMEText(html, "html")
         msg.attach(part)
 
-        with smtplib.SMTP(host, port, timeout=10) as server:
-            server.set_debuglevel(1)
-            server.starttls()
-            server.login(user, password)
-            server.sendmail(from_email, to_email, msg.as_string())
-            print(f"Successfully sent Welcome email to {to_email}")
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, timeout=10) as server:
+                server.set_debuglevel(1)
+                server.login(user, password)
+                server.sendmail(from_email, to_email, msg.as_string())
+                print(f"Successfully sent Welcome email to {to_email} (SSL)")
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as server:
+                server.set_debuglevel(1)
+                server.starttls()
+                server.login(user, password)
+                server.sendmail(from_email, to_email, msg.as_string())
+                print(f"Successfully sent Welcome email to {to_email} (STARTTLS)")
     except Exception as e:
         print(f"Failed to send welcome email: {e}")
 
