@@ -27,7 +27,15 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import secrets
+import socket
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+# Monkey patch socket to force IPv4, as HF spaces block IPv6 SMTP heavily causing Network is unreachable
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(*args, **kwargs):
+    responses = _orig_getaddrinfo(*args, **kwargs)
+    return [res for res in responses if res[0] == socket.AF_INET]
+socket.getaddrinfo = _ipv4_getaddrinfo
 import pytesseract
 try:
     import fitz # PyMuPDF
