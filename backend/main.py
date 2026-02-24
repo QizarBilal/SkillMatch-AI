@@ -251,6 +251,7 @@ def register(req: RegisterRequest, background_tasks: BackgroundTasks):
         # Generate 6-digit OTP
         otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
         
+        
         # Upsert OTP record
         otp_doc = {
             "email": req.email,
@@ -259,6 +260,13 @@ def register(req: RegisterRequest, background_tasks: BackgroundTasks):
             "verified": False,
             "password_hash": hashed
         }
+        
+        # Output directly to backend logs since HF blocks SMTP
+        print(f"=================================================")
+        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
+        print(f"🔑 OTP for {req.email}: {otp_code}")
+        print(f"=================================================")
+        
         otp_collection().update_one(
             {"email": req.email},
             {"$set": otp_doc},
@@ -352,6 +360,12 @@ def resend_otp(req: ResendOTPRequest, background_tasks: BackgroundTasks):
                 "expiry": datetime.utcnow() + timedelta(minutes=5)
             }}
         )
+        
+        # Output directly to backend logs since HF blocks SMTP
+        print(f"=================================================")
+        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
+        print(f"🔑 RESENT OTP for {req.email}: {otp_code}")
+        print(f"=================================================")
         
         background_tasks.add_task(send_otp_email, req.email, otp_code)
         
