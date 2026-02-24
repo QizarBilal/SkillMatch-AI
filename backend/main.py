@@ -113,7 +113,7 @@ def send_otp_email(to_email: str, otp: str):
         from_email = os.getenv("EMAIL_FROM", user)
 
         if not all([host, user, password]):
-            print("SMTP credentials missing, skipping OTP email.")
+            print(f"SMTP credentials missing... HOST: {bool(host)}, USER: {bool(user)}, PASS: {bool(password)}")
             return
 
         msg = MIMEMultipart("alternative")
@@ -167,7 +167,7 @@ def send_welcome_email(to_email: str, user_name: str):
         from_email = os.getenv("EMAIL_FROM", user)
 
         if not all([host, user, password]):
-            print("SMTP credentials missing, skipping Welcome email.")
+            print(f"SMTP credentials missing for WELCOME email... HOST: {bool(host)}, USER: {bool(user)}, PASS: {bool(password)}")
             return
 
         msg = MIMEMultipart("alternative")
