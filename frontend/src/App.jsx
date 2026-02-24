@@ -4,6 +4,7 @@ import Login from './Login'
 import Signup from './Signup'
 import Dashboard from './Dashboard'
 import Admin from './Admin'
+import VerifyOTP from './VerifyOTP'
 import PremiumLoader from './PremiumLoader'
 
 const AuthContext = createContext(null)
@@ -80,6 +81,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<ProtectedRoute requireAuth={false}><Login /></ProtectedRoute>} />
           <Route path="/signup" element={<ProtectedRoute requireAuth={false}><Signup /></ProtectedRoute>} />
+          <Route path="/verify-otp" element={<ProtectedRoute requireAuth={false}><VerifyOTP /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
