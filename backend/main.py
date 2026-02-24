@@ -191,7 +191,7 @@ def send_welcome_email(to_email: str, user_name: str):
                 <p>No more guessing—just clear, actionable intelligence bridging the gap between talent and opportunity.</p>
             </div>
             <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-                <a href="https://huggingface.co/spaces/qizarbilal/skillmatch-ai/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; display: inline-block; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);">Access Your Dashboard</a>
+                <a href="https://qizarbilal-skillmatch-ai.hf.space/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff !important; padding: 14px 32px; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; display: inline-block; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);">Access Your Dashboard</a>
             </div>
             <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 40px; border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 24px;">
                 Ready to elevate your career? Let's get started.
