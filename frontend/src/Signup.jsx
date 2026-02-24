@@ -77,9 +77,7 @@ export default function Signup() {
 
     try {
       const data = await api.post('/auth/register', { email, password })
-      if (data && data.requires_otp) {
-        navigate(`/verify-otp?email=${encodeURIComponent(email)}`)
-      } else if (data && data.token) {
+      if (data && data.token) {
         login(data.token, { user_id: data.user_id, email: data.email })
         navigate('/dashboard')
       }

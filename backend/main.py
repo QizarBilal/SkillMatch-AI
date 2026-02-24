@@ -105,76 +105,6 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-class VerifyOTPRequest(BaseModel):
-    email: EmailStr
-    otp: str
-
-class ResendOTPRequest(BaseModel):
-    email: EmailStr
-
-def send_otp_email(to_email: str, otp: str):
-    try:
-        host = os.getenv("SMTP_HOST")
-        port = int(os.getenv("SMTP_PORT", 587))
-        user = os.getenv("SMTP_USER")
-        password = os.getenv("SMTP_PASS")
-        from_email = os.getenv("EMAIL_FROM", user)
-
-        if not all([host, user, password]):
-            print(f"SMTP credentials missing... HOST: {bool(host)}, USER: {bool(user)}, PASS: {bool(password)}")
-            return
-
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "SkillMatch - Verify your email (OTP)"
-        msg["From"] = from_email
-        msg["To"] = to_email
-
-        text = f"Your SkillMatch verification code is: {otp}\nThis code will expire in 5 minutes."
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #0f1629; color: #f8fafc; margin: 0; padding: 40px 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%); padding: 40px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-                <div style="text-align: center; margin-bottom: 32px;">
-                    <h1 style="color: #8b5cf6; font-size: 28px; margin: 0; letter-spacing: -0.5px; font-weight: 700;">SkillMatch</h1>
-                    <p style="color: #94a3b8; font-size: 14px; margin-top: 8px;">AI Resume Intelligence Platform</p>
-                </div>
-                <h2 style="color: #e2e8f0; font-size: 20px; font-weight: 600; text-align: center;">Verify your email address</h2>
-                <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6; text-align: center; margin-top: 24px;">
-                    To complete your registration, please enter the following 6-digit verification code. This code will expire in <strong>5 minutes</strong>.
-                </p>
-                <div style="background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.5); border-radius: 12px; padding: 24px; text-align: center; margin: 32px 0;">
-                    <span style="font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #818cf8;">{otp}</span>
-                </div>
-                <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 32px; border-top: 1px solid rgba(148, 163, 184, 0.1); padding-top: 24px;">
-                    If you didn't request this code, you can safely ignore this email.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-
-        part1 = MIMEText(text, "plain")
-        part2 = MIMEText(html, "html")
-        msg.attach(part1)
-        msg.attach(part2)
-
-        if port == 465:
-            with smtplib.SMTP_SSL(host, port, timeout=10) as server:
-                server.set_debuglevel(1)
-                server.login(user, password)
-                server.sendmail(from_email, to_email, msg.as_string())
-                print(f"Successfully sent OTP email to {to_email} (SSL)")
-        else:
-            with smtplib.SMTP(host, port, timeout=10) as server:
-                server.set_debuglevel(1)
-                server.starttls()
-                server.login(user, password)
-                server.sendmail(from_email, to_email, msg.as_string())
-                print(f"Successfully sent OTP email to {to_email} (STARTTLS)")
-    except Exception as e:
-        print(f"Failed to send OTP email: {e}")
-
 def send_welcome_email(to_email: str, user_name: str):
     try:
         host = os.getenv("SMTP_HOST")
@@ -249,81 +179,16 @@ def register(req: RegisterRequest, background_tasks: BackgroundTasks):
         hashed = hash_password(req.password)
         
         # Generate 6-digit OTP
-        otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
-        
-        
-        # Upsert OTP record
-        otp_doc = {
-            "email": req.email,
-            "otp": otp_code,
-            "expiry": datetime.utcnow() + timedelta(minutes=5),
-            "verified": False,
-            "password_hash": hashed
-        }
-        
-        # Output directly to backend logs since HF blocks SMTP
-        print(f"=================================================")
-        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
-        print(f"🔑 OTP for {req.email}: {otp_code}")
-        print(f"=================================================")
-        
-        otp_collection().update_one(
-            {"email": req.email},
-            {"$set": otp_doc},
-            upsert=True
-        )
-        
-        background_tasks.add_task(send_otp_email, req.email, otp_code)
-        
-        return {"message": "OTP sent to email", "email": req.email, "requires_otp": True}
-    except pymongo.errors.OperationFailure as e:
-        print(f"Registration OperationFailure: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail=f"Database operation failed: {str(e)}"
-        )
-    except pymongo.errors.PyMongoError as e:
-        print(f"Registration PyMongoError: {e}")
-        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
-
-@app.post("/auth/verify-otp")
-def verify_otp(req: VerifyOTPRequest, background_tasks: BackgroundTasks):
-    try:
-        otp_record = otp_collection().find_one({"email": req.email})
-        
-        if not otp_record:
-            raise HTTPException(status_code=400, detail="No pending registration found for this email")
-            
-        if otp_record["verified"]:
-            raise HTTPException(status_code=400, detail="User is already verified")
-            
-        if datetime.utcnow() > otp_record["expiry"]:
-            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
-            
-        if otp_record["otp"] != req.otp:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-            
-        # OTP is valid, mark as verified and create user
-        otp_collection().update_one({"email": req.email}, {"$set": {"verified": True}})
-        
-        # Check if user somehow was created
-        existing = users_collection().find_one({"email": req.email})
-        if existing:
-            raise HTTPException(status_code=400, detail="User already exists")
-            
         user_count = users_collection().count_documents({})
         user_id = user_count + 1
         
         user_doc = {
             "user_id": user_id,
             "email": req.email,
-            "password_hash": otp_record["password_hash"],
+            "password_hash": hashed,
             "created_at": datetime.utcnow()
         }
         users_collection().insert_one(user_doc)
-        
-        # Clean up OTP record
-        otp_collection().delete_one({"email": req.email})
         
         # Generate token
         token = create_access_token({"user_id": user_id, "email": req.email})
@@ -333,46 +198,21 @@ def verify_otp(req: VerifyOTPRequest, background_tasks: BackgroundTasks):
         background_tasks.add_task(send_welcome_email, req.email, user_name)
         
         return {
+            "message": "User registered successfully", 
             "user_id": user_id,
             "email": req.email,
             "token": token
         }
-    except pymongo.errors.PyMongoError as e:
-        raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
-
-@app.post("/auth/resend-otp")
-def resend_otp(req: ResendOTPRequest, background_tasks: BackgroundTasks):
-    try:
-        otp_record = otp_collection().find_one({"email": req.email})
-        if not otp_record:
-            raise HTTPException(status_code=400, detail="No pending signup found")
-            
-        # Optional basic rate-limiting (only resend if within 4 mins to expiry, or just 1 min has passed)
-        if otp_record["expiry"] > datetime.utcnow() + timedelta(minutes=4):
-            raise HTTPException(status_code=429, detail="Please wait a minute before requesting a new OTP")
-            
-        otp_code = "".join([str(secrets.randbelow(10)) for _ in range(6)])
-        
-        otp_collection().update_one(
-            {"email": req.email},
-            {"$set": {
-                "otp": otp_code,
-                "expiry": datetime.utcnow() + timedelta(minutes=5)
-            }}
+    except pymongo.errors.OperationFailure as e:
+        print(f"Registration OperationFailure: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database operation failed: {str(e)}"
         )
-        
-        # Output directly to backend logs since HF blocks SMTP
-        print(f"=================================================")
-        print(f"🚀 [HUGGINGFACE FIREWALL BYPASS]")
-        print(f"🔑 RESENT OTP for {req.email}: {otp_code}")
-        print(f"=================================================")
-        
-        background_tasks.add_task(send_otp_email, req.email, otp_code)
-        
-        return {"message": "OTP resent"}
     except pymongo.errors.PyMongoError as e:
-        raise HTTPException(status_code=503, detail=f"Database error: {str(e)}")
-
+        print(f"Registration PyMongoError: {e}")
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
+ 
 
 @app.post("/auth/login")
 def login(req: LoginRequest):
