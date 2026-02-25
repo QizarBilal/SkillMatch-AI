@@ -2,6 +2,8 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from './App'
 import api from './api'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -918,6 +920,49 @@ export default function Dashboard() {
   const [keywordQueue, setKeywordQueue] = useState([])
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const generatePDF = async () => {
+    const reportElement = document.getElementById('skillmatch-report')
+    if (!reportElement) return
+
+    setIsGeneratingPDF(true)
+
+    try {
+      const canvas = await html2canvas(reportElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0f172a'
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+
+      let heightLeft = pdfHeight
+      let position = 0
+      const pageHeight = 295 // A4 height in mm (297) minus a tiny margin
+
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save('SkillMatch_Analysis_Report.pdf')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('Failed to generate PDF report.')
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   const userEmail = localStorage.getItem('user_email') || ''
 
@@ -1609,7 +1654,40 @@ export default function Dashboard() {
         </div>
 
         {result && (
-          <>
+          <div id="skillmatch-report" style={{ position: 'relative', padding: isGeneratingPDF ? '20px' : '0' }}>
+            {!isGeneratingPDF && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                <button
+                  onClick={generatePDF}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={e => {
+                    e.target.style.transform = 'translateY(-2px)'
+                    e.target.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)'
+                  }}
+                  onMouseLeave={e => {
+                    e.target.style.transform = 'translateY(0)'
+                    e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  📥 Download PDF Report
+                </button>
+              </div>
+            )}
+
             <div
               style={{
                 ...styles.card,
@@ -2013,7 +2091,7 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
