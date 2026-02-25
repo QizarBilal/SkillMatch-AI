@@ -14,12 +14,17 @@ def analyze_with_llm(resume_text, jd_text):
         You are an advanced Applicant Tracking System. I will provide a Candidate's Resume and a Job Description.
         You must analyze them and extract all relevant technical, soft, and domain-specific skills, regardless of the industry (Healthcare, Tech, Marketing, etc.).
         
+        CRITICAL RULES:
+        1. "job_role" MUST be short, ideally 1-4 words (e.g., "Graduate Trainee", "Registered Nurse", "Software Engineer"). Do NOT copy whole sentences from the JD overview.
+        2. Items inside "resume_skills", "job_skills", "matched_skills", and "missing_skills" MUST be standalone skills (e.g., "Python", "Communication", "Marketing", "Patient Care"). NO partial words like "ember", and NO long phrases.
+        3. Ensure all skill strings are lowercased and clean.
+
         Return ONLY a valid JSON object matching this schema exactly. DO NOT wrap it in markdown block quotes (```json).
         
         {{
-            "job_role": "Detected Job Role from JD",
-            "resume_skills": ["List", "Of", "All", "Skills", "From", "Resume"],
-            "job_skills": ["List", "Of", "Required", "Skills", "From", "JD"],
+            "job_role": "Short Detected Job Role from JD",
+            "resume_skills": ["List", "Of", "Clean", "Skills", "From", "Resume"],
+            "job_skills": ["List", "Of", "Clean", "Required", "Skills", "From", "JD"],
             "comparison": {{
                 "match_percentage": 85.5,
                 "matched_skills": ["Matched", "Skills"],
