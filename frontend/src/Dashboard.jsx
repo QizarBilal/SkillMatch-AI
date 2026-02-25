@@ -2,8 +2,8 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from './App'
 import api from './api'
-import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -922,45 +922,126 @@ export default function Dashboard() {
   const { logout } = useAuth()
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
-  const generatePDF = async () => {
-    const reportElement = document.getElementById('skillmatch-report')
-    if (!reportElement) return
+  const generatePDF = () => {
+    if (!result) return;
 
-    setIsGeneratingPDF(true)
+    setIsGeneratingPDF(true);
 
     try {
-      const canvas = await html2canvas(reportElement, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#0f172a'
-      })
+      const doc = new jsPDF();
 
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 14;
 
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      doc.setFontSize(22);
+      doc.setTextColor(30, 41, 59);
+      doc.text("SkillMatch Exec Analysis Report", margin, 20);
 
-      let heightLeft = pdfHeight
-      let position = 0
-      const pageHeight = 295 // A4 height in mm (297) minus a tiny margin
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      const dateStr = new Date().toLocaleDateString();
+      doc.text(`Generated: ${dateStr}`, margin, 28);
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
-      heightLeft -= pageHeight
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, 32, pageWidth - margin, 32);
 
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
-        heightLeft -= pageHeight
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Candidate Profile", margin, 42);
+
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Name: ${result.resume_profile?.candidate_name || 'Not Detected'}`, margin, 50);
+      doc.text(`Email: ${result.resume_profile?.contact?.email || 'Not Extracted'}`, margin, 56);
+      const expStr = result.resume_profile?.experience?.years_estimated ? `${result.resume_profile.experience.years_estimated} years` : 'Not Specified';
+      doc.text(`Estimated Experience: ${expStr}`, margin, 62);
+
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Job Role Match", margin, 76);
+
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Target Role: ${result.job_profile?.role || 'Not Specified'}`, margin, 84);
+
+      const matchScore = result.comparison?.match_percentage || 0;
+      doc.setFontSize(14);
+      doc.setTextColor(matchScore >= 75 ? 34 : (matchScore >= 50 ? 217 : 220), matchScore >= 75 ? 197 : (matchScore >= 50 ? 119 : 38), matchScore >= 75 ? 94 : (matchScore >= 50 ? 6 : 38));
+      doc.text(`Match Score: ${matchScore.toFixed(1)}%`, margin, 92);
+
+      if (result.comparison?.recommendation) {
+        doc.setFontSize(11);
+        doc.setTextColor(71, 85, 105);
+        doc.text(`System Verdict: ${result.comparison.recommendation}`, margin, 98);
       }
 
-      pdf.save('SkillMatch_Analysis_Report.pdf')
+      if (result.comparison?.experience_gap_warning) {
+        doc.setFontSize(10);
+        doc.setTextColor(220, 38, 38);
+        doc.text(`Warning: ${result.comparison.experience_gap_warning}`, margin, 106);
+      }
+
+      doc.autoTable({
+        startY: 114,
+        head: [['Matching Category', 'Skills']],
+        body: [
+          ['Matched Core Skills', result.comparison?.matched_skills?.join(', ') || 'None'],
+          ['Missing Core Skills', result.comparison?.missing_skills?.join(', ') || 'None'],
+          ['Additional Skills (Bonus)', result.comparison?.additional_skills?.join(', ') || 'None']
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [99, 102, 241] },
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: { 0: { cellWidth: 50 } }
+      });
+
+      if (result.skill_suggestions && result.skill_suggestions.suggested_skills?.length > 0) {
+        doc.addPage();
+        doc.setFontSize(16);
+        doc.setTextColor(15, 23, 42);
+        doc.text("AI Skill Recommendations", margin, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Based on industry trends and the provided Job Description, prioritizing these skills will improve competitiveness.", margin, 28, { maxWidth: pageWidth - (margin * 2) });
+
+        const suggestionRows = result.skill_suggestions.suggested_skills.map(s => [
+          s.skill,
+          s.priority,
+          s.reason,
+          s.explanation
+        ]);
+
+        doc.autoTable({
+          startY: 38,
+          head: [['Skill', 'Priority', 'Reason', 'Explanation']],
+          body: suggestionRows,
+          theme: 'striped',
+          headStyles: { fillColor: [139, 92, 246] },
+          styles: { fontSize: 9, cellPadding: 4 },
+          columnStyles: {
+            0: { cellWidth: 30, fontStyle: 'bold' },
+            1: { cellWidth: 20 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 'auto' }
+          }
+        });
+      }
+
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Page ${i} of ${pageCount} | Generated by SkillMatch AI`, margin, doc.internal.pageSize.getHeight() - 10);
+      }
+
+      doc.save(`SkillMatch_Analysis_${result.resume_profile?.candidate_name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'Report'}.pdf`);
     } catch (error) {
-      console.error('Error generating PDF:', error)
-      alert('Failed to generate PDF report.')
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF report.');
     } finally {
-      setIsGeneratingPDF(false)
+      setIsGeneratingPDF(false);
     }
   }
 
