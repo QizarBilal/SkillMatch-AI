@@ -852,6 +852,35 @@ async def analyze(
     del _nlp_cache["generate_skill_suggestions"]
     gc.collect()
 
+    # Stage 14.5: Universal LLM Override
+    # This completely overrides the static Tech dictionaries with an Advanced Generalistic Output
+    try:
+        from backend.llm_engine import analyze_with_llm
+        llm_data = analyze_with_llm(raw, jd_text)
+        if llm_data:
+            # Inject Universal Variables
+            comparison_result = llm_data['comparison']
+            comparison_result['match_percentage'] = float(comparison_result.get('match_percentage', 0))
+            
+            # Populate Fallback Skills just in case the LLM returned empty arrays
+            if not llm_data.get('skill_suggestions', {}).get('suggested_skills'):
+                 llm_data['skill_suggestions'] = skill_suggestions 
+            else:
+                 skill_suggestions = llm_data['skill_suggestions']
+                 
+            # Overwrite structured job role for UI updates
+            if llm_data.get('job_role'):
+                 jd_structured['job_role'] = llm_data['job_role']
+            job_profile_obj['role'] = jd_structured['job_role']
+            
+            # Pass all universal skills down
+            if llm_data.get('resume_skills'):
+                 all_resume_skills = llm_data['resume_skills']
+                 
+    except Exception as e:
+        print(f"Universal LLM Fallback Failed: {str(e)}")
+        pass
+
     # Stage 15: DB Insert for Analysis
     try:
         resume_doc = {

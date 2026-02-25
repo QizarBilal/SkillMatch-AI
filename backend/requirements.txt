@@ -18,3 +18,4 @@ sqlalchemy
 pydantic[email]
 pymongo
 motor
+groq
