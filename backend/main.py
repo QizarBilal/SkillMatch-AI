@@ -859,8 +859,14 @@ async def analyze(
         llm_data = analyze_with_llm(raw, jd_text)
         if llm_data:
             # Inject Universal Variables
+            original_comp = comparison_result
             comparison_result = llm_data['comparison']
             comparison_result['match_percentage'] = float(comparison_result.get('match_percentage', 0))
+            
+            # Preserve exact criteria match booleans from static parser
+            comparison_result['experience_match'] = original_comp.get('experience_match', False)
+            comparison_result['experience_gap'] = original_comp.get('experience_gap', False)
+            comparison_result['education_match'] = original_comp.get('education_match', False)
             
             # Populate Fallback Skills just in case the LLM returned empty arrays
             if not llm_data.get('skill_suggestions', {}).get('suggested_skills'):
