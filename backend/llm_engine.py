@@ -22,6 +22,7 @@ def analyze_with_llm(resume_text, jd_text):
         1. "job_role" MUST be short, ideally 1-4 words (e.g., "Graduate Trainee", "Registered Nurse", "Software Engineer"). Do NOT copy whole sentences from the JD overview.
         2. Items inside "resume_skills", "job_skills", "matched_skills", and "missing_skills" MUST be standalone skills (e.g., "Python", "Communication", "Marketing", "Patient Care"). NO partial words like "ember", and NO long phrases.
         3. Ensure all skill strings are lowercased and clean.
+        4. In the "suggested_skills" array, you MUST provide at least 3 to 5 distinct high-priority missing skills to help the candidate improve, unless they perfectly matched everything.
 
         Return ONLY a valid JSON object matching this schema exactly. DO NOT wrap it in markdown block quotes (```json).
         
