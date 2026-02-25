@@ -19,3 +19,4 @@ pydantic[email]
 pymongo
 motor
 groq
+python-dotenv
