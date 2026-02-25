@@ -731,6 +731,20 @@ def generate_skill_suggestions(
     
     unique_suggestions.sort(key=lambda x: (x['priority'] == 'high', x['skill']), reverse=True)
     
+    # Universal Fallback: Ensure recommendations aren't completely empty to trigger the frontend UI card
+    if not unique_suggestions:
+        fallback_skills = [
+            {'skill': 'python', 'reason': 'Universal technical foundation', 'explanation': 'Python is a high-level programming language essential for scripting, automation, and general programming.', 'priority': 'medium'},
+            {'skill': 'sql', 'reason': 'Universal technical foundation', 'explanation': 'SQL is fundamental for managing and querying structured databases across all domains.', 'priority': 'medium'},
+            {'skill': 'git', 'reason': 'Universal technical foundation', 'explanation': 'Git is the industry-standard version control system for tracking code changes and collaboration.', 'priority': 'high'},
+            {'skill': 'communication', 'reason': 'Key professional skill', 'explanation': 'Effective communication is critical for collaborating with cross-functional teams and stakeholders.', 'priority': 'high'},
+        ]
+        
+        resume_normalized = set(normalize_skill(s) for s in resume_skills)
+        for fs in fallback_skills:
+            if fs['skill'] not in resume_normalized:
+                unique_suggestions.append(fs)
+                
     missing_with_explanations = []
     if missing_skills:
         for skill in missing_skills[:20]:
