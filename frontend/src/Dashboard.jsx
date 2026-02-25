@@ -1966,6 +1966,7 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Skill Recommendations System (Synced from GitHub Repository) */}
               {result.skill_suggestions && result.skill_suggestions.suggested_skills?.length > 0 && (
                 <div
                   style={{
