@@ -873,9 +873,21 @@ async def analyze(
                  jd_structured['job_role'] = llm_data['job_role']
             job_profile_obj['role'] = jd_structured['job_role']
             
-            # Pass all universal skills down
+            # Pass all universal skills down and overwrite UI structures to prevent old dictionary leaking
             if llm_data.get('resume_skills'):
                  all_resume_skills = llm_data['resume_skills']
+                 resume_structured['technical_skills'] = llm_data['resume_skills']
+                 resume_skills_extracted = llm_data['resume_skills']
+                 
+            if llm_data.get('job_skills'):
+                 all_jd_skills = llm_data['job_skills']
+                 jd_structured['required_skills'] = llm_data['job_skills']
+                 jd_skills_extracted = llm_data['job_skills']
+                 # Clear out old dictionary extracts to prevent 'ember' from leaking
+                 jd_structured['required_languages'] = []
+                 jd_structured['required_frameworks'] = []
+                 jd_structured['required_tools'] = []
+                 jd_structured['required_databases'] = []
                  
     except Exception as e:
         print(f"Universal LLM Fallback Failed: {str(e)}")
