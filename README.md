@@ -10,7 +10,7 @@ SkillMatch AI is a next-generation Applicant Tracking System (ATS) powered by **
 
 ## 🚀 Live Demo
 Experience the full power of SkillMatch AI live on Hugging Face Spaces:
-👉 **[SkillMatch AI - Live Deployment]([https://huggingface.co/spaces/qizarbilal/skillmatch-ai](http://qizarbilal-skillmatch-ai.hf.space/))**
+👉 **[SkillMatch AI - Live Deployment](https://qizarbilal-skillmatch-ai.hf.space/)**
 
 ---
 
