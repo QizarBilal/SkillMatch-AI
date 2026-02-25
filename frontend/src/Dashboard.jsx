@@ -2155,17 +2155,52 @@ export default function Dashboard() {
                           background: 'rgba(139, 92, 246, 0.08)',
                           borderRadius: '10px',
                           border: '1px solid rgba(139, 92, 246, 0.2)',
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: '700', color: '#8b5cf6' }}>{suggestion.skill}</span>
-                          {suggestion.priority === 'high' && (
-                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderRadius: '10px', fontWeight: '600' }}>HIGH</span>
-                          )}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '15px', fontWeight: '700', color: '#8b5cf6' }}>{suggestion.skill}</span>
+                            {suggestion.priority === 'high' && (
+                              <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', borderRadius: '10px', fontWeight: '600' }}>HIGH</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontStyle: 'italic' }}>{suggestion.reason}</div>
+                          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '16px' }}>{suggestion.explanation}</div>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontStyle: 'italic' }}>{suggestion.reason}</div>
-                        <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6' }}>{suggestion.explanation}</div>
+                        <a
+                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(suggestion.skill + ' full course tutorial')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                            color: 'white',
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.2)'
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.transform = 'translateY(-2px)'
+                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.transform = 'translateY(0)'
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.2)'
+                          }}
+                        >
+                          🎬 Start Learning Free
+                        </a>
                       </div>
                     ))}
                   </div>
