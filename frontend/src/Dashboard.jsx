@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from './App'
 import api from './api'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -981,7 +981,7 @@ export default function Dashboard() {
         doc.text(`Warning: ${result.comparison.experience_gap_warning}`, margin, 106);
       }
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 114,
         head: [['Matching Category', 'Skills']],
         body: [
@@ -1012,7 +1012,7 @@ export default function Dashboard() {
           s.explanation
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
           startY: 38,
           head: [['Skill', 'Priority', 'Reason', 'Explanation']],
           body: suggestionRows,
