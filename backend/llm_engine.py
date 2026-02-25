@@ -1,10 +1,14 @@
 import os
 import json
 from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def analyze_with_llm(resume_text, jd_text):
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
+        print("WARNING: GROQ_API_KEY not found in environment!")
         return None
         
     try:
