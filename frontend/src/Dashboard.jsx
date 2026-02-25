@@ -1978,7 +1978,7 @@ export default function Dashboard() {
                   onMouseLeave={() => setHoveredCard(null)}
                 >
                   <div style={styles.sectionTitle}>
-                    <span>💡</span> Skill Recommendations
+                    <span>💡</span> AI Skill Suggestions
                   </div>
 
                   <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>

@@ -1021,3 +1021,5 @@ async def serve_frontend(full_path: str):
         return FileResponse(file_path)
     return FileResponse("frontend/dist/index.html")
 
+
+# Force HF rebuild
